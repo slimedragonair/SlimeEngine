@@ -73,7 +73,7 @@ SlimeAIEditorPlugin::SlimeAIEditorPlugin() :
 	dock->add_child(scroll);
 	scroll->add_child(column);
 	Label *banner = memnew(Label);
-	banner->set_text("LOCAL SERVICE · native grants only · live runs require one-run authorization");
+	banner->set_text("LOCAL SERVICE | native grants only | live runs require one-run authorization");
 	column->add_child(banner);
 	context = memnew(Label);
 	context->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
@@ -97,15 +97,22 @@ SlimeAIEditorPlugin::SlimeAIEditorPlugin() :
 	_button(column, "Recorded operation status", callable_mp(this, &SlimeAIEditorPlugin::_status));
 	_button(column, "Resolve reviewed uncertain operation (no replay)", callable_mp(this, &SlimeAIEditorPlugin::_resolve_reviewed_operation));
 	Label *run_label = memnew(Label);
-	run_label->set_text("Bounded provider task · 3 attempts / 4 tools / 1024 output tokens / 120 s");
+	run_label->set_text("Bounded provider task | 3 attempts / 4 tools / 1024 output tokens / 120 s");
 	run_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
 	column->add_child(run_label);
 	_button(column, "Provider: OpenAI Responses", callable_mp(this, &SlimeAIEditorPlugin::_provider_openai));
+	_button(column, "Provider: Anthropic Messages", callable_mp(this, &SlimeAIEditorPlugin::_provider_anthropic));
+	_button(column, "Provider: DeepSeek Chat", callable_mp(this, &SlimeAIEditorPlugin::_provider_deepseek));
+	_button(column, "Provider: Moonshot/Kimi Chat", callable_mp(this, &SlimeAIEditorPlugin::_provider_kimi));
+	_button(column, "Provider: OpenRouter Chat", callable_mp(this, &SlimeAIEditorPlugin::_provider_openrouter));
 	_button(column, "Provider: offline fake", callable_mp(this, &SlimeAIEditorPlugin::_provider_fake));
 	_button(column, "Check credential connection", callable_mp(this, &SlimeAIEditorPlugin::_provider_status));
 	model_input = memnew(LineEdit);
-	model_input->set_placeholder("Explicit OpenAI model ID (required for live run)");
+	model_input->set_placeholder("Exact model ID for selected live provider");
 	column->add_child(model_input);
+	route_input = memnew(LineEdit);
+	route_input->set_placeholder("OpenRouter exact upstream route (comma separated)");
+	column->add_child(route_input);
 	_button(column, "Intent: Discuss", callable_mp(this, &SlimeAIEditorPlugin::_intent_discuss));
 	_button(column, "Intent: Propose", callable_mp(this, &SlimeAIEditorPlugin::_intent_propose));
 	_button(column, "Intent: Execute", callable_mp(this, &SlimeAIEditorPlugin::_intent_execute));
@@ -165,7 +172,10 @@ void SlimeAIEditorPlugin::_update_context() {
 		const List<Node *> nodes = EditorNode::get_singleton()->get_editor_selection()->get_full_selected_node_list();
 		selected = nodes.is_empty() ? String(root->get_name()) : String(nodes.front()->get()->get_name());
 	}
-	context->set_text(vformat("Service: %s | Provider: %s | Intent: %s | Project: %s\nScene: %s | Selection: %s", service.get_state(), selected_provider, selected_intent, ProjectSettings::get_singleton()->get_setting("application/config/name", "Unnamed Project"), root ? root->get_scene_file_path() : String("none"), selected));
+	const Dictionary active_run = run_controller.status(root);
+	const String active_state = active_run.get("status", "idle");
+	const String active_label = active_state == "idle" ? String("none") : String(active_run.get("provider", "unknown")) + " (" + active_state + ")";
+	context->set_text(vformat("Service: %s | Next profile: %s | Next intent: %s\nActive run: %s | Project: %s\nScene: %s | Selection: %s", service.get_state(), selected_provider, selected_intent, active_label, ProjectSettings::get_singleton()->get_setting("application/config/name", "Unnamed Project"), root ? root->get_scene_file_path() : String("none"), selected));
 	scene_context_button->set_text(vformat("Scene: %s (inspect)", root ? root->get_scene_file_path().get_file() : String("none")));
 	object_context_button->set_text(vformat("Node: %s (inspect)", selected));
 }
@@ -226,7 +236,7 @@ void SlimeAIEditorPlugin::_disconnect_service() {
 void SlimeAIEditorPlugin::_request_patch() {
 	Node *root = EditorNode::get_singleton()->get_edited_scene();
 	if (!root || !service.is_ready()) {
-		_show(SlimeAI::error("CAPABILITY_UNAVAILABLE", "Scene or fake service unavailable.", "Open a scene and connect the service."));
+		_show(SlimeAI::error("CAPABILITY_UNAVAILABLE", "Scene or local service unavailable.", "Open a scene and connect the service."));
 		return;
 	}
 	_inspect();
@@ -265,7 +275,7 @@ void SlimeAIEditorPlugin::_request_patch() {
 
 void SlimeAIEditorPlugin::_on_response(const Dictionary &p_frame) {
 	if (String(p_frame.get("protocol_version", "")) == "1.1") {
-		if (p_frame.has("event")) {
+		if (p_frame.has("event") || (p_frame.has("result") && p_frame["result"].get_type() == Variant::DICTIONARY && Dictionary(p_frame["result"]).has("run_id"))) {
 			Node *root = EditorNode::get_singleton()->get_edited_scene();
 			_show(run_controller.on_frame(root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()), p_frame));
 		} else {
@@ -411,6 +421,30 @@ void SlimeAIEditorPlugin::_provider_openai() {
 	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
 }
 
+void SlimeAIEditorPlugin::_provider_anthropic() {
+	selected_provider = "anthropic_messages";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_provider_deepseek() {
+	selected_provider = "deepseek_chat";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_provider_kimi() {
+	selected_provider = "kimi_chat";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_provider_openrouter() {
+	selected_provider = "openrouter_chat";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
 void SlimeAIEditorPlugin::_provider_fake() {
 	selected_provider = "fake";
 	live_authorized_once = false;
@@ -420,11 +454,24 @@ void SlimeAIEditorPlugin::_provider_fake() {
 void SlimeAIEditorPlugin::_provider_status() {
 	Dictionary result;
 	result["status"] = "credential_status_requested";
-	result["service_request_id"] = service.request("provider_status", Dictionary());
+	Dictionary params;
+	params["profile_id"] = selected_provider;
+	result["service_request_id"] = service.request("provider_status", params);
 	if (String(result["service_request_id"]).is_empty()) {
 		result["status"] = "service_unavailable";
 	}
 	_show(result);
+}
+
+static Array _route_selection(const String &p_input) {
+	Array route;
+	for (const String &part : p_input.split(",", false)) {
+		const String upstream = part.strip_edges();
+		if (!upstream.is_empty()) {
+			route.push_back(upstream);
+		}
+	}
+	return route;
 }
 
 void SlimeAIEditorPlugin::_intent_discuss() {
@@ -443,27 +490,50 @@ void SlimeAIEditorPlugin::_intent_execute() {
 }
 
 void SlimeAIEditorPlugin::_authorize_live_once() {
-	if (selected_provider != "openai_responses" || model_input->get_text().strip_edges().is_empty()) {
-		_show(SlimeAI::error("MODEL_REQUIRED", "Select OpenAI and enter the exact model ID first.", "Enter a model ID, then authorize one bounded run."));
+	Node *root = EditorNode::get_singleton()->get_edited_scene();
+	const Array route = _route_selection(route_input->get_text());
+	if (selected_provider == "fake" || model_input->get_text().strip_edges().is_empty() || !root || (selected_provider == "openrouter_chat" && route.is_empty()) || (selected_provider != "openrouter_chat" && !route.is_empty())) {
+		_show(SlimeAI::error("UNSUPPORTED_CONFIGURATION", "Select a live profile, exact model, loaded scene, and required route.", "Review the dry-run scope before authorizing."));
+		return;
+	}
+	const Dictionary inspection = SlimeAI::SceneInspector::inspect(root, EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));
+	if (inspection.has("error")) {
+		_show(inspection);
 		return;
 	}
 	live_authorized_once = true;
 	live_authorized_model = model_input->get_text().strip_edges();
+	live_authorized_provider = selected_provider;
+	live_authorized_scene_ref = inspection["scene_ref"];
+	live_authorized_revision = inspection["revision"];
+	live_authorized_intent = selected_intent;
+	live_authorized_mode = int(transaction.get_mode());
+	live_authorized_route = route.duplicate();
 	Dictionary result;
-	result["status"] = "one_run_authorized";
+	result["status"] = "one_run_authorized_dry_run";
 	result["provider"] = selected_provider;
 	result["model"] = live_authorized_model;
+	result["route_only"] = live_authorized_route;
+	result["scene_ref"] = live_authorized_scene_ref;
+	result["revision"] = live_authorized_revision;
+	result["intent"] = live_authorized_intent;
+	result["permission_mode"] = live_authorized_mode == SlimeAI::SceneTransaction::MANUAL ? "Manual" : (live_authorized_mode == SlimeAI::SceneTransaction::PROTECTED ? "Protected" : "Freedom");
 	result["limits"] = "3 attempts, 4 tool calls, 1024 output tokens, 120-second deadline";
-	result["endpoint"] = "https://api.openai.com/v1/responses";
+	result["context_limit_bytes"] = 32768;
+	result["request_timeout_ms"] = 30000;
+	result["limit_mode"] = "finite_requests_and_tokens_no_monetary_cap";
+	result["network_request"] = "not_run";
 	_show(result);
 }
 
 void SlimeAIEditorPlugin::_start_run() {
 	Node *root = EditorNode::get_singleton()->get_edited_scene();
 	const String model = selected_provider == "fake" ? String() : model_input->get_text().strip_edges();
-	const bool authorized = selected_provider == "openai_responses" && live_authorized_once && live_authorized_model == model;
+	const Array route = _route_selection(route_input->get_text());
+	const Dictionary inspection = root ? SlimeAI::SceneInspector::inspect(root, EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene())) : Dictionary();
+	const bool authorized = selected_provider != "fake" && live_authorized_once && live_authorized_provider == selected_provider && live_authorized_model == model && live_authorized_intent == selected_intent && live_authorized_mode == int(transaction.get_mode()) && live_authorized_route == route && !inspection.has("error") && String(inspection.get("scene_ref", "")) == live_authorized_scene_ref && String(inspection.get("revision", "")) == live_authorized_revision;
 	live_authorized_once = false;
-	_show(run_controller.start(root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()), selected_provider, model, selected_intent, task_input->get_text(), authorized));
+	_show(run_controller.start(root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()), selected_provider, model, selected_intent, task_input->get_text(), authorized, route));
 }
 
 void SlimeAIEditorPlugin::_cancel_run() {
@@ -513,6 +583,11 @@ void SlimeAIEditorPlugin::_notification(int p_what) {
 		if (save_failure_probe.enabled()) {
 			Node *root = EditorNode::get_singleton()->get_edited_scene();
 			save_failure_probe.tick(transaction, root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));
+		}
+		if (save_regression_probe.enabled()) {
+			Node *root = EditorNode::get_singleton()->get_edited_scene();
+			save_regression_probe.tick(transaction, root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));
+			return;
 		}
 		const uint64_t now = OS::get_singleton()->get_ticks_msec();
 		if (now - last_context_update >= 500) {

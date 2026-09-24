@@ -39,14 +39,16 @@ namespace SlimeAI {
 
 bool ServiceClient::start(const String &p_script_path) {
 	stop();
-	if (!OS::get_singleton()->get_environment("SLIME_AI_OPENAI_API_KEY").is_empty()) {
-		state = "unavailable";
-		last_error = "The editor cannot launch the service with a provider key in its environment. Use the user credential store instead.";
-		return false;
+	for (const char *name : { "SLIME_AI_OPENAI_API_KEY", "SLIME_AI_ANTHROPIC_API_KEY", "SLIME_AI_DEEPSEEK_API_KEY", "SLIME_AI_MOONSHOT_API_KEY", "SLIME_AI_OPENROUTER_API_KEY" }) {
+		if (!OS::get_singleton()->get_environment(name).is_empty()) {
+			state = "unavailable";
+			last_error = "The editor cannot launch the service with a provider key in its environment. Use the user credential store instead.";
+			return false;
+		}
 	}
 	if (!FileAccess::exists(p_script_path)) {
 		state = "unavailable";
-		last_error = "Fake service script is missing.";
+		last_error = "Local service script is missing.";
 		return false;
 	}
 	List<String> arguments;
@@ -56,7 +58,7 @@ bool ServiceClient::start(const String &p_script_path) {
 	Dictionary child = OS::get_singleton()->execute_with_pipe("node", arguments, false);
 	if (!child.has("stdio") || !child.has("pid")) {
 		state = "unavailable";
-		last_error = "Node 24 could not start the fake service.";
+		last_error = "Node 24 could not start the local service.";
 		return false;
 	}
 	stdio = child["stdio"];
@@ -86,7 +88,7 @@ String ServiceClient::request(const String &p_method, const Dictionary &p_params
 	const CharString wire = (JSON::stringify(envelope) + "\n").utf8();
 	if (wire.length() > MAX_FRAME_BYTES || !stdio->store_buffer((const uint8_t *)wire.get_data(), wire.length())) {
 		state = "disconnected";
-		last_error = "Could not send request to fake service.";
+		last_error = "Could not send request to the local service.";
 		return String();
 	}
 	pending_id = id;
@@ -114,7 +116,7 @@ void ServiceClient::poll(Vector<Dictionary> &r_responses) {
 	if (available == 0) {
 		if (exited) {
 			state = "disconnected";
-			last_error = "Fake service exited before a complete response.";
+			last_error = "Local service exited before a complete response.";
 			stdio.unref();
 			stderr_pipe.unref();
 		}
@@ -125,7 +127,7 @@ void ServiceClient::poll(Vector<Dictionary> &r_responses) {
 	const uint64_t count = stdio->get_buffer(data.ptrw(), available);
 	if (exited && count == 0) {
 		state = "disconnected";
-		last_error = "Fake service exited before a complete response.";
+		last_error = "Local service exited before a complete response.";
 		stdio.unref();
 		stderr_pipe.unref();
 		return;
@@ -169,12 +171,12 @@ void ServiceClient::poll(Vector<Dictionary> &r_responses) {
 		if (pending_method == "hello") {
 			if (String(frame["status"]) != "ok") {
 				state = "unavailable";
-				last_error = "Fake service handshake failed.";
+				last_error = "Local service handshake failed.";
 			} else {
 				Dictionary result = frame["result"];
 				if (!result.has("protocol_version") || String(result["protocol_version"]) != "1.0" || !result.has("capabilities") || result["capabilities"].get_type() != Variant::ARRAY || !Array(result["capabilities"]).has("fake_propose_scene_patch")) {
 					state = "protocol_error";
-					last_error = "Fake service capabilities are invalid.";
+					last_error = "Local service capabilities are invalid.";
 				} else {
 					state = "ready";
 				}
@@ -198,7 +200,7 @@ void ServiceClient::poll(Vector<Dictionary> &r_responses) {
 	}
 	if (exited && count < available) {
 		state = "disconnected";
-		last_error = "Fake service exited.";
+		last_error = "Local service exited.";
 		stdio.unref();
 		stderr_pipe.unref();
 	}

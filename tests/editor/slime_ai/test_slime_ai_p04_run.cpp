@@ -88,7 +88,7 @@ TEST_CASE("[SlimeAI][P04Run] fake Execute uses native grant and exactly one tran
 		premature_event["run_id"] = started["run_id"];
 		premature_event["event"] = "tool_call_ready";
 		premature_event["data"] = premature_data;
-		CHECK(String(Dictionary(run.on_frame(root, true, premature_event)["error"])["code"]) == "PROVIDER_PROTOCOL_ERROR");
+		CHECK(String(Dictionary(run.on_frame(root, true, premature_event)["error"])["code"]) == "STALE_REFERENCE");
 		CHECK(root->get_child_count() == 0);
 		_wait_for_preview(service, run, root);
 		REQUIRE_FALSE(run.get_preview_id().is_empty());

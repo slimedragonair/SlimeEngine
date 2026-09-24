@@ -334,3 +334,55 @@ test('unresolved result halts continuation; cancel ignores late provider complet
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(late.some(value => (value as { event?: string }).event === 'tool_call_ready'), false);
 });
+
+test('run copies profile, model, route, scope, and finite limits before asynchronous dispatch', async () => {
+  const output: object[] = [];
+  const seen: ProviderRequest[] = [];
+  const manager = new RunManager(value => output.push(value), async (request, onEvent) => {
+    seen.push(request);
+    const result: TurnResult = { response_id: 'done', text: '', call: null, usage: { input_tokens: null, output_tokens: null } };
+    onEvent({ kind: 'turn_completed', result });
+    return result;
+  });
+  const original = { ...start('openai_responses'), params: { ...start('openai_responses').params,
+    provider: 'openrouter_chat' as const, model: 'fixture-model', route_only: ['offline/upstream'],
+    limits: { ...limits, max_attempts: 2 }, context: '{"scene_ref":"original"}' } };
+  const ack = manager.handle(original) as { result: { profile_fingerprint: string } };
+  original.params.model = 'changed';
+  original.params.route_only.push('unapproved');
+  original.params.context = '{"scene_ref":"changed"}';
+  original.params.limits.max_attempts = 8;
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(seen.length, 1);
+  assert.equal(seen[0].model, 'fixture-model');
+  assert.equal(seen[0].context, '{"scene_ref":"original"}');
+  assert.deepEqual(seen[0].profile?.route?.only, ['offline/upstream']);
+  assert.equal(seen[0].profile?.fingerprint, ack.result.profile_fingerprint);
+  assert.equal(Object.isFrozen(seen[0].profile?.route?.only), true);
+  assert.equal((output.find(value => (value as { event?: string }).event === 'run_state') as { data: { profile_fingerprint: string } }).data.profile_fingerprint, ack.result.profile_fingerprint);
+});
+
+test('cumulative usage replaces earlier updates and failed retries keep unknown reservation', async () => {
+  const frames: Array<{ event?: string; data?: { accounting?: Record<string, unknown> } }> = [];
+  let attempt = 0;
+  const manager = new RunManager(value => frames.push(value as { event?: string; data?: { accounting?: Record<string, unknown> } }), async (_request, onEvent) => {
+    attempt++;
+    if (attempt === 1) throw new ProviderTurnError('PROVIDER_RATE_LIMITED', 'offline fixture', true);
+    onEvent({ kind: 'usage_update', usage: { input_tokens: 3, output_tokens: 2 } });
+    onEvent({ kind: 'usage_update', usage: { input_tokens: 12, output_tokens: 5 } });
+    const result: TurnResult = { response_id: 'complete', text: '', call: null, usage: { input_tokens: 12, output_tokens: 5 } };
+    onEvent({ kind: 'turn_completed', result });
+    return result;
+  });
+  manager.handle({ ...start(), params: { ...start().params, limits: { ...limits, max_attempts: 2 } } });
+  await new Promise(resolve => setTimeout(resolve, 15));
+  assert.equal(attempt, 2);
+  const completed = frames.filter(frame => frame.event === 'run_state' && frame.data?.accounting?.attempts === 2).at(-1);
+  assert.deepEqual(completed?.data?.accounting, {
+    attempts: 2, reported_input_tokens: null, reported_output_tokens: null,
+    unknown_input_attempts: 1, unknown_output_attempts: 1,
+    reserved_output_tokens: 512, monetary_estimate: null, pricing_source: null,
+  });
+  const latestUsage = frames.filter(frame => frame.event === 'usage_update').at(-1);
+  assert.equal(latestUsage?.data?.accounting?.reported_input_tokens, null);
+});

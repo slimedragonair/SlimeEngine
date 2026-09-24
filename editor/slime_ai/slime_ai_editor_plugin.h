@@ -35,6 +35,7 @@
 #include "editor/slime_ai/slime_ai_service_client.h"
 #include "editor/slime_ai/slime_ai_run_controller.h"
 #include "editor/slime_ai/slime_ai_save_failure_probe.h"
+#include "editor/slime_ai/slime_ai_save_regression_probe.h"
 #include "editor/slime_ai/slime_ai_p04_editor_probe.h"
 
 class EditorDock;
@@ -56,13 +57,21 @@ class SlimeAIEditorPlugin : public EditorPlugin {
 	SlimeAI::SceneTransaction transaction;
 	SlimeAI::RunController run_controller;
 	SlimeAI::SaveFailureProbe save_failure_probe;
+	SlimeAI::SaveRegressionProbe save_regression_probe;
 	SlimeAI::P04EditorProbe p04_editor_probe;
 	LineEdit *model_input = nullptr;
+	LineEdit *route_input = nullptr;
 	TextEdit *task_input = nullptr;
 	String selected_provider = "openai_responses";
 	String selected_intent = "discuss";
 	bool live_authorized_once = false;
 	String live_authorized_model;
+	String live_authorized_provider;
+	String live_authorized_scene_ref;
+	String live_authorized_revision;
+	String live_authorized_intent;
+	int live_authorized_mode = 0;
+	Array live_authorized_route;
 	Dictionary last_inspection;
 	Dictionary last_proposal;
 	Dictionary context_manifest;
@@ -92,6 +101,10 @@ class SlimeAIEditorPlugin : public EditorPlugin {
 	void _status();
 	void _resolve_reviewed_operation();
 	void _provider_openai();
+	void _provider_anthropic();
+	void _provider_deepseek();
+	void _provider_kimi();
+	void _provider_openrouter();
 	void _provider_fake();
 	void _provider_status();
 	void _intent_discuss();

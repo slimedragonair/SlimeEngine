@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/variant/dictionary.h"
+#include "core/variant/array.h"
 #include "core/string/ustring.h"
 
 class Node;
@@ -21,12 +22,17 @@ class RunController {
 	String intent = "discuss";
 	String provider = "openai_responses";
 	String model;
+	String permission_mode_at_start;
+	Array route_only;
+	String profile_fingerprint;
+	String event_request_id;
 	String state = "idle";
 	String preview_id;
 	String preview_base_revision;
 	String operation_id;
 	String model_text;
 	Dictionary usage;
+	Dictionary accounting;
 	Dictionary preview_record;
 	Dictionary save_fact;
 	String check_fact = "not_run";
@@ -42,7 +48,7 @@ class RunController {
 
 public:
 	RunController(ServiceClient &p_service, SceneTransaction &p_transaction);
-	Dictionary start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized);
+	Dictionary start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only = Array());
 	Dictionary on_frame(Node *p_root, bool p_editor_unsaved, const Dictionary &p_frame);
 	Dictionary cancel();
 	Dictionary pause();

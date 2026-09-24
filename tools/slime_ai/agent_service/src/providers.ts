@@ -1,13 +1,15 @@
 import { readOpenAIKey } from './credentials.ts';
 import { parseSse, ProviderTurnError, TurnAccumulator, type ProviderEvent, type TurnResult } from './provider_events.ts';
 import { OPENAI_TOOLS } from './tool_schema.ts';
+import type { ProfileId, ProfileSnapshot } from './provider_profiles.ts';
 
 export type Intent = 'discuss' | 'propose' | 'execute';
-export type Provider = 'fake' | 'openai_responses';
+export type Provider = ProfileId;
 export type ProviderRequest = {
   provider: Provider; model: string | null; intent: Intent; prompt: string; context: string;
   max_output_tokens: number; request_timeout_ms: number;
   previous_response_id?: string; call_id?: string; tool_result?: string;
+  profile?: ProfileSnapshot; continuation?: unknown;
   signal: AbortSignal;
 };
 
@@ -28,6 +30,7 @@ export async function openAIResponse(request: ProviderRequest, onEvent: (event: 
   if (request.signal.aborted) throw new ProviderTurnError('CANCELLED', 'Provider request cancelled.');
   if (!key) throw new ProviderTurnError('CREDENTIAL_MISSING', 'OpenAI credential is not configured.');
   if (!request.model) throw new ProviderTurnError('MODEL_REQUIRED', 'Choose an explicit OpenAI model.');
+  if (request.profile && (request.profile.id !== 'openai_responses' || request.profile.endpoint !== ENDPOINT || request.profile.model !== request.model)) throw new ProviderTurnError('UNSUPPORTED_CONFIGURATION', 'OpenAI profile snapshot does not match the request.');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), request.request_timeout_ms);
   const cancel = (): void => controller.abort();
@@ -46,7 +49,7 @@ export async function openAIResponse(request: ProviderRequest, onEvent: (event: 
   try {
     response = await fetchImpl(ENDPOINT, {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body), signal: controller.signal,
+      body: JSON.stringify(body), signal: controller.signal, redirect: 'error',
     });
     if (!response.ok) {
       const status = response.status;

@@ -34,19 +34,31 @@ static bool _keys(const Dictionary &p_args, const Vector<String> &p_expected) {
 	return true;
 }
 
+static String _mode_name(SceneTransaction::ApprovalMode p_mode) {
+	return p_mode == SceneTransaction::MANUAL ? "Manual" : (p_mode == SceneTransaction::PROTECTED ? "Protected" : "Freedom");
+}
+
 RunController::RunController(ServiceClient &p_service, SceneTransaction &p_transaction) :
 		service(p_service), transaction(p_transaction) {
 }
 
-Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized) {
+Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only) {
 	if (!service.is_ready() || !p_root || (state != "idle" && state != "completed" && state != "failed" && state != "cancelled")) {
 		return _failure("RUN_BUSY", "A ready service and one loaded scene are required; finish the current run first.");
 	}
-	if ((p_provider != "fake" && p_provider != "openai_responses") || (p_intent != "discuss" && p_intent != "propose" && p_intent != "execute") || p_prompt.strip_edges().is_empty()) {
+	if ((p_provider != "fake" && p_provider != "openai_responses" && p_provider != "anthropic_messages" && p_provider != "deepseek_chat" && p_provider != "kimi_chat" && p_provider != "openrouter_chat") || (p_intent != "discuss" && p_intent != "propose" && p_intent != "execute") || p_prompt.strip_edges().is_empty()) {
 		return _failure("INVALID_ARGUMENT", "Choose a supported provider, intent, and nonempty task.");
 	}
-	if ((p_provider == "fake" && (p_live_authorized || !p_model.is_empty())) || (p_provider == "openai_responses" && (!p_live_authorized || p_model.strip_edges().is_empty()))) {
-		return _failure("LIVE_AUTHORIZATION_REQUIRED", "Live OpenAI requires an explicit model and one-run authorization.");
+	if ((p_provider == "fake" && (p_live_authorized || !p_model.is_empty())) || (p_provider != "fake" && (!p_live_authorized || p_model.strip_edges().is_empty()))) {
+		return _failure("LIVE_AUTHORIZATION_REQUIRED", "A live provider requires an explicit model and one-run authorization.");
+	}
+	if ((p_provider == "openrouter_chat" && (p_route_only.is_empty() || p_route_only.size() > 8)) || (p_provider != "openrouter_chat" && !p_route_only.is_empty())) {
+		return _failure("UNSUPPORTED_CONFIGURATION", "OpenRouter requires an exact upstream route; other profiles cannot set one.");
+	}
+	for (int i = 0; i < p_route_only.size(); i++) {
+		if (p_route_only[i].get_type() != Variant::STRING || String(p_route_only[i]).is_empty()) {
+			return _failure("UNSUPPORTED_CONFIGURATION", "Route entries must be nonempty upstream names.");
+		}
 	}
 	const Dictionary inspection = SceneInspector::inspect(p_root, p_editor_unsaved);
 	if (inspection.has("error")) {
@@ -85,12 +97,19 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	params["context"] = serialized_context;
 	params["limits"] = limits;
 	params["live_authorized"] = p_live_authorized;
+	if (p_provider == "openrouter_chat") {
+		params["route_only"] = p_route_only;
+	}
 	const String request_id = service.request("run_start", params);
 	if (request_id.is_empty()) {
 		return _failure("CAPABILITY_UNAVAILABLE", "Could not start the bounded service run.");
 	}
 	provider = p_provider;
 	model = p_model;
+	permission_mode_at_start = _mode_name(transaction.get_mode());
+	route_only = p_route_only.duplicate();
+	profile_fingerprint.clear();
+	event_request_id = request_id;
 	intent = p_intent;
 	scene_ref = inspection["scene_ref"];
 	scene_path = inspection["scene_path"];
@@ -100,6 +119,7 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	operation_id.clear();
 	model_text.clear();
 	usage.clear();
+	accounting.clear();
 	preview_record.clear();
 	save_fact.clear();
 	check_fact = "not_run";
@@ -167,10 +187,23 @@ Dictionary RunController::dispatch_tool(Node *p_root, bool p_editor_unsaved, con
 
 Dictionary RunController::on_frame(Node *p_root, bool p_editor_unsaved, const Dictionary &p_frame) {
 	if (p_frame.has("status")) {
+		if (String(p_frame.get("request_id", "")) != event_request_id) {
+			return _failure("STALE_REFERENCE", "A stale service acknowledgement was ignored.");
+		}
+		if (p_frame.has("result") && p_frame["result"].get_type() == Variant::DICTIONARY) {
+			const Dictionary result = p_frame["result"];
+			if (String(result.get("run_id", "")) == run_id && result.has("profile_fingerprint")) {
+				profile_fingerprint = result["profile_fingerprint"];
+			}
+		}
 		if (cancel_pending && String(p_frame.get("status", "")) == "ok") {
 			Dictionary params;
 			params["run_id"] = run_id;
-			cancel_pending = service.request("run_cancel", params).is_empty();
+			const String cancel_request_id = service.request("run_cancel", params);
+			cancel_pending = cancel_request_id.is_empty();
+			if (!cancel_pending) {
+				event_request_id = cancel_request_id;
+			}
 		}
 		return p_frame;
 	}
@@ -179,6 +212,12 @@ Dictionary RunController::on_frame(Node *p_root, bool p_editor_unsaved, const Di
 	}
 	const String event = p_frame["event"];
 	const Dictionary data = p_frame["data"];
+	if (String(p_frame.get("request_id", "")) != event_request_id || profile_fingerprint.is_empty() || String(data.get("profile_fingerprint", "")) != profile_fingerprint) {
+		return _failure("STALE_REFERENCE", "A stale or mismatched provider callback was ignored.");
+	}
+	if (data.has("accounting") && data["accounting"].get_type() == Variant::DICTIONARY) {
+		accounting = data["accounting"];
+	}
 	if (cancelled) {
 		return status(p_root);
 	}
@@ -210,7 +249,9 @@ Dictionary RunController::on_frame(Node *p_root, bool p_editor_unsaved, const Di
 			return result;
 		}
 		completed_turn_has_call = false;
-		if (tool_calls >= 4 || state == "failed" || state == "cancelled" || !_keys(data, { "call_id", "tool_name", "arguments", "provider_response_id" }) || data["arguments"].get_type() != Variant::DICTIONARY) {
+		Dictionary call_data = data.duplicate();
+		call_data.erase("profile_fingerprint");
+		if (tool_calls >= 4 || state == "failed" || state == "cancelled" || !_keys(call_data, { "call_id", "tool_name", "arguments", "provider_response_id" }) || data["arguments"].get_type() != Variant::DICTIONARY) {
 			return _failure("PROVIDER_PROTOCOL_ERROR", "Unexpected tool call event.");
 		}
 		tool_calls++;
@@ -222,10 +263,12 @@ Dictionary RunController::on_frame(Node *p_root, bool p_editor_unsaved, const Di
 		params["run_id"] = run_id;
 		params["call_id"] = data["call_id"];
 		params["tool_result"] = continuation;
-		if (service.request("run_continue", params).is_empty()) {
+		const String continuation_request_id = service.request("run_continue", params);
+		if (continuation_request_id.is_empty()) {
 			state = "reconciliation_required";
 			return _failure("APPLY_FAILED_RECOVERY_REQUIRED", "Tool result could not be returned to the service; inspect native status before retrying.");
 		}
+		event_request_id = continuation_request_id;
 		Dictionary result = status(p_root);
 		result["tool_result"] = tool_result;
 		return result;
@@ -244,6 +287,9 @@ Dictionary RunController::cancel() {
 	Dictionary params;
 	params["run_id"] = run_id;
 	const String request_id = service.request("run_cancel", params);
+	if (!request_id.is_empty()) {
+		event_request_id = request_id;
+	}
 	cancel_pending = request_id.is_empty();
 	Dictionary result = status(nullptr);
 	result["service_cancel_sent"] = !request_id.is_empty();
@@ -324,11 +370,16 @@ Dictionary RunController::status(Node *p_root) const {
 	result["run_id"] = run_id;
 	result["provider"] = provider;
 	result["model"] = model.is_empty() ? Variant() : Variant(model);
+	result["permission_mode_at_start"] = permission_mode_at_start;
+	result["current_permission_mode"] = _mode_name(transaction.get_mode());
+	result["route_only"] = route_only;
+	result["profile_fingerprint"] = profile_fingerprint;
 	result["intent"] = intent;
 	result["scene_path"] = scene_path;
 	result["scene_ref"] = scene_ref;
 	result["model_text_untrusted"] = model_text;
 	result["usage"] = usage.is_empty() ? Variant() : Variant(usage);
+	result["accounting"] = accounting.is_empty() ? Variant() : Variant(accounting);
 	result["tool_calls"] = tool_calls;
 	result["paused"] = paused;
 	result["limits"] = "3 attempts, 4 tool calls, 1024 output tokens, 120-second deadline";

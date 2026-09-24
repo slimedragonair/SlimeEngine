@@ -54,6 +54,7 @@ class SceneTransaction {
 public:
 	explicit SceneTransaction(const String &p_journal_path);
 	Dictionary set_mode(ApprovalMode p_mode, Node *p_selected_root);
+	ApprovalMode get_mode() const { return approval_mode; }
 	Dictionary preview(Node *p_root, const String &p_operation_id, const Dictionary &p_proposal, bool p_editor_unsaved);
 	Dictionary grant(const String &p_preview_id);
 	Dictionary cancel(const String &p_preview_id);

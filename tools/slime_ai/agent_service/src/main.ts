@@ -3,7 +3,8 @@ import { DELAY_MS, responseFor } from './fake_provider.ts';
 import { errorResponse, parseRequest, ProtocolFault } from './protocol.ts';
 import { RunManager } from './run_manager.ts';
 import { parseStrictJson } from './strict_json.ts';
-import { openAICredentialStatus } from './credentials.ts';
+import { profileCredentialStatus } from './credentials.ts';
+import { describeProfile } from './provider_profiles.ts';
 
 const decoder = new FrameDecoder();
 const write = (value: object): void => { process.stdout.write(`${JSON.stringify(value)}\n`); };
@@ -31,8 +32,11 @@ async function handle(text: string): Promise<boolean> {
       }
     }
     if (request.protocol_version === '1.1' && request.method === 'provider_status') {
+      const profileId = request.params.profile_id ?? 'openai_responses';
+      const profile = describeProfile(profileId);
       write({ protocol_version: '1.1', request_id: request.request_id, status: 'ok', result: {
-        provider: 'openai_responses', credential: await openAICredentialStatus(), endpoint: 'https://api.openai.com/v1/responses',
+        provider: profileId, credential: await profileCredentialStatus(profileId), endpoint: profile.endpoint,
+        family: profile.family, profile_revision: profile.revision, model: null, live_observation: 'not_run',
       } });
     } else if (request.protocol_version === '1.1') write(runs.handle(request));
     else write(responseFor(request));

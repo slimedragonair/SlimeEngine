@@ -1,4 +1,5 @@
 import { parseStrictJson } from './strict_json.ts';
+import { createProfileSnapshot, PROFILE_IDS, type ProfileId } from './provider_profiles.ts';
 
 export type HelloRequest = {
   protocol_version: '1.0'; request_id: string; method: 'hello';
@@ -15,7 +16,7 @@ export type RunLimits = {
 };
 export type RunStartRequest = {
   protocol_version: '1.1'; request_id: string; method: 'run_start';
-  params: { run_id: string; provider: 'fake' | 'openai_responses'; model: string | null;
+  params: { run_id: string; provider: ProfileId; model: string | null; route_only?: string[];
     intent: 'discuss' | 'propose' | 'execute'; prompt: string; context: string;
     limits: RunLimits; live_authorized: boolean };
 };
@@ -27,7 +28,7 @@ export type RunCancelRequest = {
   protocol_version: '1.1'; request_id: string; method: 'run_cancel'; params: { run_id: string };
 };
 export type ProviderStatusRequest = {
-  protocol_version: '1.1'; request_id: string; method: 'provider_status'; params: Record<string, never>;
+  protocol_version: '1.1'; request_id: string; method: 'provider_status'; params: { profile_id?: ProfileId };
 };
 export type ServiceRequest = HelloRequest | ProposalRequest | RunStartRequest | RunContinueRequest | RunCancelRequest | ProviderStatusRequest;
 
@@ -104,21 +105,24 @@ export function parseRequest(text: string): ServiceRequest {
   }
   if (raw.protocol_version === '1.1') {
     if (raw.method === 'provider_status') {
-      exactKeys(raw.params, [], requestId);
-      return { protocol_version: '1.1', request_id: requestId, method: 'provider_status', params: {} };
+      const hasProfile = Object.prototype.hasOwnProperty.call(raw.params, 'profile_id');
+      exactKeys(raw.params, hasProfile ? ['profile_id'] : [], requestId);
+      if (hasProfile && !PROFILE_IDS.includes(raw.params.profile_id as ProfileId)) throw new ProtocolFault('INVALID_ARGUMENT', 'Unknown provider profile.', requestId, 'Choose a configured profile.');
+      return { protocol_version: '1.1', request_id: requestId, method: 'provider_status', params: hasProfile ? { profile_id: raw.params.profile_id as ProfileId } : {} };
     }
     if (raw.method === 'run_start') {
-      exactKeys(raw.params, ['run_id', 'provider', 'model', 'intent', 'prompt', 'context', 'limits', 'live_authorized'], requestId);
+      const hasRoute = Object.prototype.hasOwnProperty.call(raw.params, 'route_only');
+      exactKeys(raw.params, ['run_id', 'provider', 'model', 'intent', 'prompt', 'context', 'limits', 'live_authorized', ...(hasRoute ? ['route_only'] : [])], requestId);
       const run_id = boundedString(raw.params.run_id, requestId, 'run_id');
       if (Buffer.byteLength(run_id) > 128) throw new ProtocolFault('INVALID_ARGUMENT', 'run_id exceeds 128 bytes.', requestId, 'Choose a shorter run ID.');
       const provider = raw.params.provider;
       const model = raw.params.model;
       const intent = raw.params.intent;
-      if (provider !== 'fake' && provider !== 'openai_responses') throw new ProtocolFault('INVALID_ARGUMENT', 'Unknown provider.', requestId, 'Select a configured provider.');
+      if (!PROFILE_IDS.includes(provider as ProfileId)) throw new ProtocolFault('INVALID_ARGUMENT', 'Unknown provider.', requestId, 'Select a configured provider.');
       if (intent !== 'discuss' && intent !== 'propose' && intent !== 'execute') throw new ProtocolFault('INVALID_ARGUMENT', 'Unknown intent.', requestId, 'Choose Discuss, Propose, or Execute.');
       if (typeof raw.params.live_authorized !== 'boolean') throw new ProtocolFault('INVALID_ARGUMENT', 'live_authorized must be boolean.', requestId, 'Use the trusted live-run control.');
       if (provider === 'fake' && (model !== null || raw.params.live_authorized)) throw new ProtocolFault('INVALID_ARGUMENT', 'Fake provider requires null model and no live authorization.', requestId, 'Use offline fake mode.');
-      if (provider === 'openai_responses' && (typeof model !== 'string' || !model.trim() || Buffer.byteLength(model) > 128 || !raw.params.live_authorized)) throw new ProtocolFault('LIVE_AUTHORIZATION_REQUIRED', 'A live OpenAI run requires an explicit model and live authorization.', requestId, 'Choose the model and authorize this bounded run.');
+      if (provider !== 'fake' && (typeof model !== 'string' || !model.trim() || Buffer.byteLength(model) > 128 || !raw.params.live_authorized)) throw new ProtocolFault('LIVE_AUTHORIZATION_REQUIRED', 'A live provider run requires an explicit model and authorization.', requestId, 'Choose the profile, model, route, and authorize this bounded run.');
       const prompt = boundedText(raw.params.prompt, requestId, 'prompt', 16384);
       const context = boundedText(raw.params.context, requestId, 'context', 32768);
       if (!prompt.trim()) throw new ProtocolFault('INVALID_ARGUMENT', 'Prompt is empty.', requestId, 'Enter a request.');
@@ -136,7 +140,11 @@ export function parseRequest(text: string): ServiceRequest {
         request_timeout_ms: boundedInteger(raw.params.limits.request_timeout_ms, 1000, 120000, requestId, 'request_timeout_ms'),
         deadline_ms: boundedInteger(raw.params.limits.deadline_ms, 1000, 600000, requestId, 'deadline_ms'),
       };
-      return { protocol_version: '1.1', request_id: requestId, method: 'run_start', params: { run_id, provider, model: model as string | null, intent, prompt, context, limits, live_authorized: raw.params.live_authorized } };
+      const route = raw.params.route_only;
+      if (hasRoute && (!Array.isArray(route) || route.some(value => typeof value !== 'string'))) throw new ProtocolFault('INVALID_ARGUMENT', 'Route allowlist must contain strings.', requestId, 'Choose exact approved upstreams.');
+      try { createProfileSnapshot(provider as ProfileId, model as string | null, hasRoute ? route as string[] : [], limits.max_output_tokens); }
+      catch { throw new ProtocolFault('UNSUPPORTED_CONFIGURATION', 'Profile, model, route, or limits are unsupported.', requestId, 'Review the profile and exact route before dispatch.'); }
+      return { protocol_version: '1.1', request_id: requestId, method: 'run_start', params: { run_id, provider: provider as ProfileId, model: model as string | null, ...(hasRoute ? { route_only: route as string[] } : {}), intent, prompt, context, limits, live_authorized: raw.params.live_authorized } };
     }
     if (raw.method === 'run_continue') {
       exactKeys(raw.params, ['run_id', 'call_id', 'tool_result'], requestId);
