@@ -1,0 +1,50 @@
+{
+  "model": "deepseek-flash",
+  "network_request": "not_run",
+  "permission_mode": "Manual",
+  "provider": "deepseek_chat",
+  "serialized_context_bytes": 708,
+  "status": "no_network_preflight",
+  "transmitted_context": {
+    "base_revision": "3650e06b4536ac0a66c670fbf95beb681f85edc56773b2cc6ff47f5becb25ae9",
+    "editor_unsaved": false,
+    "parent_ref": "scene:1484884350424:1484884350424:.",
+    "root_class": "Node2D",
+    "scene_path": "res://main.tscn",
+    "scene_ref": "scene:1484884350424",
+    "selected_scene_summary": [
+      {
+        "class_name": "Node2D",
+        "instance_path": "",
+        "name": "FixtureRoot",
+        "owner_ref": "",
+        "path": ".",
+        "position": {
+          "type": "Vector2",
+          "value": [
+            0.0,
+            0.0
+          ]
+        },
+        "ref": "scene:1484884350424:1484884350424:.",
+        "visible": true
+      },
+      {
+        "class_name": "Node2D",
+        "instance_path": "",
+        "name": "Marker",
+        "owner_ref": "scene:1484884350424:1484884350424:.",
+        "path": "Marker",
+        "position": {
+          "type": "Vector2",
+          "value": [
+            12.0,
+            34.0
+          ]
+        },
+        "ref": "scene:1484884350424:1484901127645:Marker",
+        "visible": true
+      }
+    ]
+  }
+}

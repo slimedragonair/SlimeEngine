@@ -1,5 +1,7 @@
 # P05 provider verification matrix
 
+Direct DeepSeek `deepseek-flash` first-session preflight (2026-09-24) is documented in `evidence/P05_DEEPSEEK_FLASH_LIVE_DEMO.md`: implementation and offline wire/native checks passed, credential `missing`, live `not_run`. The other four live states are unchanged. The original P05 source/binary matrix below is historical; the later preflight source commit is `bda77699e8` and editor binary SHA-256 is `F7D20A4C95EA208ADC5175204F3D3178BDC53D0305A69729BDD01E52700C93FB`.
+
 Source commit: `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd`. Built editor SHA-256: `1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855`. Verification date: 2026-09-24. The offline model string `offline-fixture-model` is a fixture value, not a claim that a vendor serves it.
 
 | Profile | Protocol / fixed endpoint | Implementation | Offline wire | Built-editor native loop | Real-input control | Live |

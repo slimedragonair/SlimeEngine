@@ -1,5 +1,11 @@
 # Next task at the P05 handoff
 
+The direct DeepSeek `deepseek-flash` first-session preflight is complete without network access. `evidence/P05_DEEPSEEK_FLASH_LIVE_DEMO.md` is the exact proposed policy and evidence. Before any paid request, the user must approve that policy, including the $2 reservation allowance, 12 total attempts, 24 total tools, disposable fixture and `frame_001.png` image hash, per-stage output limits, and stop-on-first-failure rule. The credential target `SlimeEngine/DeepSeek` currently reports `missing`; the user should rotate the key previously shared in chat and install it privately in Windows Credential Manager. Recheck credential status without exposing bytes and recheck the rate source if the live date changes. A service restart needs a fresh budget/authorization review.
+
+After both policy approval and private credential availability, run the seven-stage ladder in order. Use the actual editor for scene/preview/apply/persistence, and the production adapter's read-only image path for the approved screenshot. Stop at first failed stage, reconcile uncertain native effects, and keep unfinished stages `not_run`. Do not broaden tools or start P06.
+
+## Earlier handoff instruction
+
 The implementation/offline gate is complete at source commit `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd`; `STATUS.md`, `TEST_MATRIX.md`, and `PROVIDER_MATRIX.md` contain the source/binary/test identities. Do not begin P06 or broaden the native transaction boundary as part of this handoff.
 
 The next distinct task is one explicitly authorized live DeepSeek `deepseek-flash` run on a disposable selected-scene fixture. First record the exact profile/endpoint, model, scene path and context attachments, mode, finite request/tool/mutation/output/input/time limits, and a chosen monetary cap with rate source or explicit alternative limit mode. Configure the credential in the user-scoped store without pasting it into project files or logs; rotate the previously chat-shared key. Review the dry-run configuration and authorize that one run. Start with read-only inspection, then a nonmutating preview, then separately grant one native application. Observe usage, status, save/reopen, and any provider errors. No live call has yet been made.

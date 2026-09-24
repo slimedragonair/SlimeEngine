@@ -1,5 +1,13 @@
 # Known issues and limitations
 
+## Direct DeepSeek pilot preflight limits
+
+- Credential status is `missing` in the configured private store. The key shared in chat was not installed or used; no live-provider claim is possible until a privately configured credential and explicit policy approval are present.
+- The $2 pilot is a pre-request **reservation** at the verified 2026-09-24 peak Flash rate, not a provider invoice guarantee. It counts attempts/tool calls per local service session and does not persist a monetary ledger across service restarts; restart ends this approval and requires fresh human review. No automatic limit increase is implemented.
+- A 256 KiB PNG `user` image block is implemented for read-only DeepSeek Discuss through the production Chat Completions adapter. The editor dock does not have a general image picker; the approved fixture file is supplied by the explicit local image preflight/live harness. Arbitrary paths and unrestricted screen capture are not model tools. A real image response remains `not_run`.
+- The no-network preflight context is an exact snapshot from a particular editor load. Scene and node references change after reopen, so every later live stage must freshly inspect the selected scene and review its current revision. The image stage deliberately sends no scene summary or filename as visual answer context.
+- One parallel final native test run failed a P04 pause/resume timing assertion before the tool-call event arrived; its evidence is retained. The test was corrected to wait for that asynchronous event and a solo 41-case rerun passed. This is not a claim that the full upstream Godot suite ran.
+
 ## P05 additions
 
 - The five profiles are implemented and passed offline production-adapter wire fixtures, but none has been observed against a live provider. Provider acceptance, actual served OpenRouter route, real usage, billing, model-specific capabilities, and production network behavior remain `not_run`.

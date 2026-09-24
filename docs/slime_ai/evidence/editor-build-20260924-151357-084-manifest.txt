@@ -1,0 +1,18 @@
+revision=d198db95c3ca33d49e0b8a4d75f4aba53cb249e2
+command=python -c <process-local misc import correction> platform=windows target=editor arch=x86_64 tests=yes dev_build=yes -j8
+started_utc=2026-09-24T15:13:57.2007073Z
+dirty_paths:
+ M docs/slime_ai/evidence/native-tests-manifest.txt
+ M docs/slime_ai/evidence/native-tests.log
+?? docs/slime_ai/SlimeEngine_AI_Implementation_Plan.md
+?? docs/slime_ai/SlimeEngine_Agent_Kickoff.md
+?? docs/slime_ai/SlimeEngine_P03_Closeout_P04_Work_Order.md
+?? docs/slime_ai/SlimeEngine_P04_Verification_P05_Work_Order.md
+?? docs/slime_ai/evidence/editor-build-20260924-150307-800-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-150935-930-manifest.txt
+?? docs/slime_ai/evidence/p05-deepseek-adapter-preflight.json
+?? docs/slime_ai/evidence/p05-deepseek-native-preflight.json
+exit_code=0
+binary=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe
+binary_sha256=8A2C670A83FC308A41E28352B1D40A806C59EB99E2398A056D8119E02626E4A2
+finished_utc=2026-09-24T15:14:37.5374639Z

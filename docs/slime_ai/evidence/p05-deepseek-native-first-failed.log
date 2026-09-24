@@ -1,0 +1,14 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+tests\editor\slime_ai\test_slime_ai_p04_run.cpp(184):
+TEST CASE:  [SlimeAI][P04Run] pause defers tool dispatch and cancel preserves scene
+
+tests\editor\slime_ai\test_slime_ai_p04_run.cpp(209): FATAL ERROR: REQUIRE_FALSE( run.get_preview_id().is_empty() ) is NOT correct!
+  values: REQUIRE_FALSE( true )
+
+===============================================================================
+[doctest] test cases:  41 |  40 passed | 1 failed | 1429 skipped
+[doctest] assertions: 511 | 510 passed | 1 failed |
+[doctest] Status: FAILURE!
+Unicode parsing error: Byte 28 is not a correct continuation byte after c3

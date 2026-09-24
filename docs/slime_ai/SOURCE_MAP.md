@@ -28,6 +28,13 @@ These symbols were inspected at local HEAD, not inferred from the remote plan. T
 
 ## P05 source map at commit `2fced2f7c0`
 
+### Direct DeepSeek Flash preflight source (`d198db95c3` plus `bda77699e8`)
+
+- `tools/slime_ai/agent_service/src/image_input.ts`: bounded inline PNG signature/dimension/size check. `src/deepseek_pilot_budget.ts`: peak-rate pre-request $2 reservation and 12-attempt/24-tool service-session counters.
+- `src/protocol.ts`, `src/providers.ts`, `src/chat_completions.ts`, `src/run_manager.ts`: read-only image input, explicit disabled/low DeepSeek thinking, standard user image block, complete-turn/continuation preservation, returned model/fingerprint events, and budget guard before direct DeepSeek HTTP dispatch.
+- `editor/slime_ai/slime_ai_run_controller.{h,cpp}` and `slime_ai_editor_plugin.{h,cpp}`: explicit output/thinking selection bound to one-run native authorization; exact selected-scene context can be inspected without service/network, including an opt-in fixture capture. Native preview/grant/apply/recovery path is unchanged.
+- `tools/slime_ai/agent_service/tests/deepseek_live_preflight.test.ts` and `deepseek_no_network_preflight.ts`: outbound image/thinking/pilot tests and an intercepted production-adapter preflight with no network. `tests/editor/slime_ai/test_slime_ai_p04_run.cpp`: native no-service context case and asynchronous resume wait.
+
 - `tools/slime_ai/agent_service/src/provider_profiles.ts`: immutable endpoint, protocol family, credential target, route policy, model/limit validation, and nonsecret run fingerprint for five live profiles and fake.
 - `src/anthropic_messages.ts`, `src/chat_completions.ts`, and retained `src/providers.ts`: provider-format SSE assembly and complete-turn barrier. Anthropic keeps assistant/thinking blocks for continuation; Chat Completions keeps result and reasoning linkage; OpenAI keeps Responses call IDs. Fixed endpoints reject redirects.
 - `src/run_manager.ts`, `src/protocol.ts`, `src/main.ts`, `src/credentials.ts`: one serial finite run, profile snapshot, stale/duplicate continuation rejection, per-attempt usage/reservation, versioned frames, and profile-specific user credential lookup. `src/tool_schema.ts` remains the one model-facing operation validator.

@@ -1,5 +1,23 @@
 # P00–P03 test matrix
 
+## DeepSeek Flash preflight final checks (2026-09-24)
+
+Source commit `bda77699e8b99335f03fdcf236fa0b3d32a36938`; editor binary SHA-256 `F7D20A4C95EA208ADC5175204F3D3178BDC53D0305A69729BDD01E52700C93FB`; build manifest `evidence/editor-build-20260924-151602-284-manifest.txt`.
+
+| Command | Result |
+|---|---|
+| `powershell -NoProfile -ExecutionPolicy Bypass -File tools/slime_ai/harness/build_editor.ps1 -Jobs 8` | exit 0 |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File tools/slime_ai/harness/run_native_tests.ps1` | solo rerun exit 0, 41/41 cases, 512/512 assertions, 1429 non-SlimeAI cases excluded; `evidence/native-tests.log` |
+| `npm test` in `tools/slime_ai/agent_service` | 68/68, exit 0; includes five new DeepSeek image/thinking/budget cases; `evidence/p05-deepseek-service-tests.txt` |
+| `npm run typecheck` in that directory | exit 0; `evidence/p05-deepseek-typecheck.txt` |
+| Opt-in built-editor no-network context capture on copied fixture, `--headless --editor --rendering-method gl_compatibility --path <fixture> res://main.tscn --quit-after 60` | exit 0, 708-byte transmitted context; `evidence/p05-deepseek-native-preflight.json` |
+| `node --disable-warning=ExperimentalWarning --experimental-strip-types tests/deepseek_no_network_preflight.ts <native-json> <frame_001.png> <adapter-json>` | exit 0, five intercepted production-adapter request shapes, credential `missing`, external requests 0; `evidence/p05-deepseek-adapter-preflight.json` |
+| Full upstream suite / live DeepSeek | `not_run` / `not_run` |
+
+The parallel first final native attempt failed one asynchronous P04 resume assertion (40/41, 510/511). Its `p05-deepseek-native-first-failed.*` files are retained. The test now waits for the tool-call event after Resume; the rebuilt solo rerun passed. The focused native suite and offline fixtures do not establish real provider acceptance, vision quality, billing, or persistence of a live edit. Detailed stage states are in `evidence/P05_DEEPSEEK_FLASH_LIVE_DEMO.md`.
+
+---
+
 ## P05 final verification (2026-09-24)
 
 Source commit `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd`; binary SHA-256 `1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855`. The historical P00–P04 matrix follows this section. Commands were run in `E:\SlimeEngine` except npm commands, which used `tools/slime_ai/agent_service`.

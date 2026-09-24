@@ -1,8 +1,8 @@
-revision=bda77699e8b99335f03fdcf236fa0b3d32a36938
+revision=d198db95c3ca33d49e0b8a4d75f4aba53cb249e2
 binary=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe
-binary_sha256=F7D20A4C95EA208ADC5175204F3D3178BDC53D0305A69729BDD01E52700C93FB
+binary_sha256=8A2C670A83FC308A41E28352B1D40A806C59EB99E2398A056D8119E02626E4A2
 filter=*[SlimeAI]*
 command=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe --test --test-case=*[SlimeAI]* --no-colors
-exit_code=0
+exit_code=1
 executed_cases=41
-summary=[doctest] test cases:  41 |  41 passed | 0 failed | 1429 skipped
+summary=[doctest] test cases:  41 |  40 passed | 1 failed | 1429 skipped

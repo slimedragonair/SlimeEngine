@@ -1,5 +1,13 @@
 # Slime AI status — P05 handoff
 
+## Direct DeepSeek Flash live preflight (2026-09-24)
+
+The first live target is fixed to direct DeepSeek Chat Completions, model `deepseek-flash`, base URL `https://api.deepseek.com`, Manual mode, and one disposable copied 2D fixture. The no-network preflight **passed**; actual live stages are **`not_run`** because the private credential check returned `missing` and the final bounded policy still needs explicit approval. No external provider request or billable action occurred. Exact payload, source/binary identity, $2 pilot reservation rule, stage states, and evidence are in `evidence/P05_DEEPSEEK_FLASH_LIVE_DEMO.md`. This work retained the P05 adapter, shared run manager, and native transaction path. Other providers remain live `not_run`.
+
+Safe implementation source is `bda77699e8b99335f03fdcf236fa0b3d32a36938`; built editor SHA-256 `F7D20A4C95EA208ADC5175204F3D3178BDC53D0305A69729BDD01E52700C93FB`. Service 68/68, typecheck exit 0, native 41/41 cases and 512/512 assertions. The earlier parallel native failure is retained; the asynchronous test wait was corrected and a solo rerun passed. The current documentation/evidence commit does not change the source/build identity below.
+
+## Earlier P05 handoff
+
 P05 implementation source is commit `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd` on `codex/slime-ai-p00-p03`. The editor built from it is `bin/godot.windows.editor.dev.x86_64.console.exe`, SHA-256 `1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855` (`evidence/editor-build-20260924-032939-741-manifest.txt`). The service package lock SHA-256 is `B4B9EAF42178EC6F360C4FFD5230012658B7A9C43BAC8EB317FE85E32E01284A`. Documentation is committed separately after verification; that later HEAD changes no P05 source or binary identity.
 
 | Dimension | P05 state | Evidence |
