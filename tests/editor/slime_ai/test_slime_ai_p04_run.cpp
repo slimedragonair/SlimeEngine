@@ -41,6 +41,24 @@ static Dictionary _wait_for_preview(SlimeAI::ServiceClient &p_service, SlimeAI::
 	return last;
 }
 
+TEST_CASE("[SlimeAI][P05Preflight] selected scene context is inspectable without service or dispatch") {
+	Node2D *root = memnew(Node2D);
+	root->set_name("FixtureRoot");
+	SlimeAI::ServiceClient service;
+	const String journal = _journal();
+	SlimeAI::SceneTransaction transaction(journal);
+	SlimeAI::RunController run(service, transaction);
+	const Dictionary preflight = run.preflight_context(root, true);
+	CHECK(String(preflight["status"]) == "no_network_preflight");
+	CHECK(int(preflight["serialized_context_bytes"]) > 0);
+	const Dictionary sent = preflight["transmitted_context"];
+	CHECK(String(sent["root_class"]) == "Node2D");
+	CHECK(bool(sent["editor_unsaved"]));
+	CHECK_FALSE(service.is_ready());
+	memdelete(root);
+	DirAccess::remove_absolute(journal);
+}
+
 TEST_CASE("[SlimeAI][P04Run] fake Propose cannot apply; human revision blocks Execute transition") {
 	const String journal = _journal();
 	Node2D *root = memnew(Node2D);

@@ -22,9 +22,13 @@ class RunController {
 	String intent = "discuss";
 	String provider = "openai_responses";
 	String model;
+	String deepseek_thinking = "disabled";
+	int max_output_tokens = 1024;
 	String permission_mode_at_start;
 	Array route_only;
 	String profile_fingerprint;
+	String returned_model;
+	String backend_fingerprint;
 	String event_request_id;
 	String state = "idle";
 	String preview_id;
@@ -48,7 +52,8 @@ class RunController {
 
 public:
 	RunController(ServiceClient &p_service, SceneTransaction &p_transaction);
-	Dictionary start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only = Array());
+	Dictionary preflight_context(Node *p_root, bool p_editor_unsaved) const;
+	Dictionary start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only = Array(), const String &p_deepseek_thinking = "disabled", int p_max_output_tokens = 1024);
 	Dictionary on_frame(Node *p_root, bool p_editor_unsaved, const Dictionary &p_frame);
 	Dictionary cancel();
 	Dictionary pause();

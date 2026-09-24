@@ -42,7 +42,39 @@ RunController::RunController(ServiceClient &p_service, SceneTransaction &p_trans
 		service(p_service), transaction(p_transaction) {
 }
 
-Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only) {
+static Dictionary _context_from_inspection(const Dictionary &p_inspection) {
+	Dictionary context;
+	context["scene_ref"] = p_inspection["scene_ref"];
+	context["base_revision"] = p_inspection["revision"];
+	context["parent_ref"] = p_inspection["root_ref"];
+	context["root_class"] = p_inspection["root_class"];
+	context["scene_path"] = p_inspection["scene_path"];
+	context["editor_unsaved"] = p_inspection["editor_unsaved"];
+	context["selected_scene_summary"] = p_inspection["nodes"];
+	return context;
+}
+
+Dictionary RunController::preflight_context(Node *p_root, bool p_editor_unsaved) const {
+	if (!p_root) {
+		return _failure("INVALID_ARGUMENT", "Select one loaded scene first.");
+	}
+	const Dictionary inspection = SceneInspector::inspect(p_root, p_editor_unsaved);
+	if (inspection.has("error")) {
+		return _failure(String(inspection["error"]), "The selected scene could not be inspected.");
+	}
+	const Dictionary context = _context_from_inspection(inspection);
+	const String serialized = JSON::stringify(context);
+	if (serialized.utf8().length() > 32768) {
+		return _failure("INVALID_ARGUMENT", "Selected scene context exceeds 32768 bytes.");
+	}
+	Dictionary result;
+	result["status"] = "no_network_preflight";
+	result["transmitted_context"] = context;
+	result["serialized_context_bytes"] = serialized.utf8().length();
+	return result;
+}
+
+Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const String &p_provider, const String &p_model, const String &p_intent, const String &p_prompt, bool p_live_authorized, const Array &p_route_only, const String &p_deepseek_thinking, int p_max_output_tokens) {
 	if (!service.is_ready() || !p_root || (state != "idle" && state != "completed" && state != "failed" && state != "cancelled")) {
 		return _failure("RUN_BUSY", "A ready service and one loaded scene are required; finish the current run first.");
 	}
@@ -54,6 +86,9 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	}
 	if ((p_provider == "openrouter_chat" && (p_route_only.is_empty() || p_route_only.size() > 8)) || (p_provider != "openrouter_chat" && !p_route_only.is_empty())) {
 		return _failure("UNSUPPORTED_CONFIGURATION", "OpenRouter requires an exact upstream route; other profiles cannot set one.");
+	}
+	if ((p_deepseek_thinking != "disabled" && p_deepseek_thinking != "low") || (p_provider != "deepseek_chat" && p_deepseek_thinking != "disabled") || (p_max_output_tokens != 256 && p_max_output_tokens != 1024 && p_max_output_tokens != 2048)) {
+		return _failure("UNSUPPORTED_CONFIGURATION", "Select an explicit supported thinking and output bound.");
 	}
 	for (int i = 0; i < p_route_only.size(); i++) {
 		if (p_route_only[i].get_type() != Variant::STRING || String(p_route_only[i]).is_empty()) {
@@ -68,14 +103,7 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	if (!unresolved.is_empty() && p_intent != "discuss") {
 		return _failure("RECONCILIATION_REQUIRED", "Resolve operation " + unresolved + " before another proposal or edit.");
 	}
-	Dictionary context;
-	context["scene_ref"] = inspection["scene_ref"];
-	context["base_revision"] = inspection["revision"];
-	context["parent_ref"] = inspection["root_ref"];
-	context["root_class"] = inspection["root_class"];
-	context["scene_path"] = inspection["scene_path"];
-	context["editor_unsaved"] = inspection["editor_unsaved"];
-	context["selected_scene_summary"] = inspection["nodes"];
+	const Dictionary context = _context_from_inspection(inspection);
 	const String serialized_context = JSON::stringify(context);
 	if (serialized_context.utf8().length() > 32768 || p_prompt.utf8().length() > 16384) {
 		return _failure("INVALID_ARGUMENT", "Task or selected scene context exceeds the bounded run limit.");
@@ -85,7 +113,7 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	Dictionary limits;
 	limits["max_attempts"] = 3;
 	limits["max_tool_calls"] = 4;
-	limits["max_output_tokens"] = 1024;
+	limits["max_output_tokens"] = p_max_output_tokens;
 	limits["request_timeout_ms"] = 30000;
 	limits["deadline_ms"] = 120000;
 	Dictionary params;
@@ -97,6 +125,9 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	params["context"] = serialized_context;
 	params["limits"] = limits;
 	params["live_authorized"] = p_live_authorized;
+	if (p_provider == "deepseek_chat") {
+		params["deepseek_thinking"] = p_deepseek_thinking;
+	}
 	if (p_provider == "openrouter_chat") {
 		params["route_only"] = p_route_only;
 	}
@@ -106,9 +137,13 @@ Dictionary RunController::start(Node *p_root, bool p_editor_unsaved, const Strin
 	}
 	provider = p_provider;
 	model = p_model;
+	deepseek_thinking = p_deepseek_thinking;
+	max_output_tokens = p_max_output_tokens;
 	permission_mode_at_start = _mode_name(transaction.get_mode());
 	route_only = p_route_only.duplicate();
 	profile_fingerprint.clear();
+	returned_model.clear();
+	backend_fingerprint.clear();
 	event_request_id = request_id;
 	intent = p_intent;
 	scene_ref = inspection["scene_ref"];
@@ -235,6 +270,8 @@ Dictionary RunController::on_frame(Node *p_root, bool p_editor_unsaved, const Di
 		}
 	} else if (event == "turn_completed") {
 		completed_turn_has_call = bool(data.get("provider_turn_complete", false)) && bool(data.get("has_tool_call", false));
+		returned_model = data.get("returned_model", "");
+		backend_fingerprint = data.get("backend_fingerprint", "");
 	} else if (event == "turn_failed") {
 		state = "failed";
 		completed_turn_has_call = false;
@@ -370,10 +407,13 @@ Dictionary RunController::status(Node *p_root) const {
 	result["run_id"] = run_id;
 	result["provider"] = provider;
 	result["model"] = model.is_empty() ? Variant() : Variant(model);
+	result["deepseek_thinking"] = provider == "deepseek_chat" ? Variant(deepseek_thinking) : Variant();
 	result["permission_mode_at_start"] = permission_mode_at_start;
 	result["current_permission_mode"] = _mode_name(transaction.get_mode());
 	result["route_only"] = route_only;
 	result["profile_fingerprint"] = profile_fingerprint;
+	result["returned_model"] = returned_model.is_empty() ? Variant() : Variant(returned_model);
+	result["backend_fingerprint"] = backend_fingerprint.is_empty() ? Variant() : Variant(backend_fingerprint);
 	result["intent"] = intent;
 	result["scene_path"] = scene_path;
 	result["scene_ref"] = scene_ref;
@@ -382,7 +422,7 @@ Dictionary RunController::status(Node *p_root) const {
 	result["accounting"] = accounting.is_empty() ? Variant() : Variant(accounting);
 	result["tool_calls"] = tool_calls;
 	result["paused"] = paused;
-	result["limits"] = "3 attempts, 4 tool calls, 1024 output tokens, 120-second deadline";
+	result["limits"] = vformat("3 attempts, 4 tool calls, %d output tokens, 120-second deadline", max_output_tokens);
 	result["preview_id"] = preview_id;
 	result["preview"] = preview_record;
 	result["operation_id"] = operation_id;

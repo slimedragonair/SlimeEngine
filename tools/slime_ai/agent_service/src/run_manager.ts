@@ -7,6 +7,7 @@ import { ProviderTurnError, type ProviderEvent, type ReadyCall } from './provide
 import { ProtocolFault, type RunCancelRequest, type RunContinueRequest, type RunStartRequest } from './protocol.ts';
 import { createProfileSnapshot, type ProfileSnapshot } from './provider_profiles.ts';
 import type { Usage } from './provider_events.ts';
+import { DeepSeekPilotBudget } from './deepseek_pilot_budget.ts';
 
 type Request = RunStartRequest | RunContinueRequest | RunCancelRequest;
 type RunState = 'waiting_for_provider' | 'awaiting_tool' | 'completed' | 'failed' | 'cancelled' | 'reconciliation_required';
@@ -21,6 +22,7 @@ const hash = (value: unknown): string => createHash('sha256').update(JSON.string
 
 export class RunManager {
   private run: ActiveRun | null = null;
+  private readonly deepseekBudget = new DeepSeekPilotBudget();
   private readonly usedRunIds = new Set<string>();
   private readonly write: (value: object) => void;
   private readonly provider: (request: ProviderRequest, onEvent: (event: ProviderEvent) => void) => Promise<{ response_id: string; call: ReadyCall | null; continuation?: unknown }>;
@@ -128,6 +130,8 @@ export class RunManager {
           request_timeout_ms: Math.min(limits.request_timeout_ms, Math.max(1, run.startedAt + limits.deadline_ms - Date.now())),
           previous_response_id: run.previousResponseId, call_id: callId, tool_result: toolResult,
           profile: run.profile, continuation: run.continuation, signal: run.abort.signal,
+          image_input: params.image_input, deepseek_thinking: params.deepseek_thinking,
+          reserve_pre_request: params.provider === 'deepseek_chat' ? (body, hasImage) => this.deepseekBudget.reserve(body, hasImage) : undefined,
         };
         const turn = await this.provider(request, event => {
           if (run.state !== 'waiting_for_provider') return;
@@ -136,7 +140,8 @@ export class RunManager {
             run.usageByAttempt.set(run.attempts, event.usage);
             this.event(run, 'usage_update', { ...event.usage, attempt: run.attempts, accounting: this.accounting(run) });
           }
-          else if (event.kind === 'turn_completed') this.event(run, 'turn_completed', { response_id: event.result.response_id, provider_turn_complete: true, task_complete: false, has_tool_call: event.result.call !== null });
+          else if (event.kind === 'turn_completed') this.event(run, 'turn_completed', { response_id: event.result.response_id, provider_turn_complete: true, task_complete: false, has_tool_call: event.result.call !== null,
+            returned_model: event.result.returned_model ?? null, backend_fingerprint: event.result.backend_fingerprint ?? null });
         });
         if (run.state !== 'waiting_for_provider') return;
         run.previousResponseId = turn.response_id;
@@ -144,6 +149,7 @@ export class RunManager {
         if (turn.call) {
           if (run.toolCalls >= limits.max_tool_calls) throw new ProviderTurnError('RUN_LIMIT', 'Tool-call limit reached.');
           if (params.intent === 'discuss' && turn.call.tool_name === 'scene_patch_preview') throw new ProviderTurnError('PERMISSION_DENIED', 'Discuss cannot request scene previews.');
+          if (params.provider === 'deepseek_chat') this.deepseekBudget.recordToolCall();
           run.toolCalls++;
           run.pending = turn.call;
           run.state = 'awaiting_tool';
@@ -182,6 +188,7 @@ export class RunManager {
     return { attempts: run.attempts, reported_input_tokens: unknownInput ? null : input,
       reported_output_tokens: unknownOutput ? null : output, unknown_input_attempts: unknownInput,
       unknown_output_attempts: unknownOutput, reserved_output_tokens: run.attempts * run.start.params.limits.max_output_tokens,
-      monetary_estimate: null, pricing_source: null };
+      monetary_estimate: null, pricing_source: null,
+      ...(run.start.params.provider === 'deepseek_chat' ? { deepseek_pilot_reservation: this.deepseekBudget.status() } : {}) };
   }
 }

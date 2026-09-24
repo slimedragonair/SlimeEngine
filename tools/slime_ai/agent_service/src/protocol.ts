@@ -1,5 +1,6 @@
 import { parseStrictJson } from './strict_json.ts';
 import { createProfileSnapshot, PROFILE_IDS, type ProfileId } from './provider_profiles.ts';
+import { validateInlinePng, type InlinePng } from './image_input.ts';
 
 export type HelloRequest = {
   protocol_version: '1.0'; request_id: string; method: 'hello';
@@ -18,7 +19,8 @@ export type RunStartRequest = {
   protocol_version: '1.1'; request_id: string; method: 'run_start';
   params: { run_id: string; provider: ProfileId; model: string | null; route_only?: string[];
     intent: 'discuss' | 'propose' | 'execute'; prompt: string; context: string;
-    limits: RunLimits; live_authorized: boolean };
+    limits: RunLimits; live_authorized: boolean; image_input?: InlinePng;
+    deepseek_thinking?: 'disabled' | 'low' };
 };
 export type RunContinueRequest = {
   protocol_version: '1.1'; request_id: string; method: 'run_continue';
@@ -112,7 +114,9 @@ export function parseRequest(text: string): ServiceRequest {
     }
     if (raw.method === 'run_start') {
       const hasRoute = Object.prototype.hasOwnProperty.call(raw.params, 'route_only');
-      exactKeys(raw.params, ['run_id', 'provider', 'model', 'intent', 'prompt', 'context', 'limits', 'live_authorized', ...(hasRoute ? ['route_only'] : [])], requestId);
+      const hasImage = Object.prototype.hasOwnProperty.call(raw.params, 'image_input');
+      const hasThinking = Object.prototype.hasOwnProperty.call(raw.params, 'deepseek_thinking');
+      exactKeys(raw.params, ['run_id', 'provider', 'model', 'intent', 'prompt', 'context', 'limits', 'live_authorized', ...(hasRoute ? ['route_only'] : []), ...(hasImage ? ['image_input'] : []), ...(hasThinking ? ['deepseek_thinking'] : [])], requestId);
       const run_id = boundedString(raw.params.run_id, requestId, 'run_id');
       if (Buffer.byteLength(run_id) > 128) throw new ProtocolFault('INVALID_ARGUMENT', 'run_id exceeds 128 bytes.', requestId, 'Choose a shorter run ID.');
       const provider = raw.params.provider;
@@ -123,6 +127,13 @@ export function parseRequest(text: string): ServiceRequest {
       if (typeof raw.params.live_authorized !== 'boolean') throw new ProtocolFault('INVALID_ARGUMENT', 'live_authorized must be boolean.', requestId, 'Use the trusted live-run control.');
       if (provider === 'fake' && (model !== null || raw.params.live_authorized)) throw new ProtocolFault('INVALID_ARGUMENT', 'Fake provider requires null model and no live authorization.', requestId, 'Use offline fake mode.');
       if (provider !== 'fake' && (typeof model !== 'string' || !model.trim() || Buffer.byteLength(model) > 128 || !raw.params.live_authorized)) throw new ProtocolFault('LIVE_AUTHORIZATION_REQUIRED', 'A live provider run requires an explicit model and authorization.', requestId, 'Choose the profile, model, route, and authorize this bounded run.');
+      if (hasThinking && (provider !== 'deepseek_chat' || (raw.params.deepseek_thinking !== 'disabled' && raw.params.deepseek_thinking !== 'low'))) throw new ProtocolFault('UNSUPPORTED_CONFIGURATION', 'Thinking selection is supported only for direct DeepSeek.', requestId, 'Choose disabled or low for DeepSeek.');
+      if (hasImage && (provider !== 'deepseek_chat' || intent !== 'discuss')) throw new ProtocolFault('PERMISSION_DENIED', 'Image input is limited to read-only DeepSeek Discuss.', requestId, 'Use a bounded read-only fixture image.');
+      let image_input: InlinePng | undefined;
+      if (hasImage) {
+        try { image_input = validateInlinePng(raw.params.image_input); }
+        catch { throw new ProtocolFault('INVALID_ARGUMENT', 'Invalid bounded PNG input.', requestId, 'Use one approved PNG fixture of at most 256 KiB and 4096 pixels per side.'); }
+      }
       const prompt = boundedText(raw.params.prompt, requestId, 'prompt', 16384);
       const context = boundedText(raw.params.context, requestId, 'context', 32768);
       if (!prompt.trim()) throw new ProtocolFault('INVALID_ARGUMENT', 'Prompt is empty.', requestId, 'Enter a request.');
@@ -144,7 +155,7 @@ export function parseRequest(text: string): ServiceRequest {
       if (hasRoute && (!Array.isArray(route) || route.some(value => typeof value !== 'string'))) throw new ProtocolFault('INVALID_ARGUMENT', 'Route allowlist must contain strings.', requestId, 'Choose exact approved upstreams.');
       try { createProfileSnapshot(provider as ProfileId, model as string | null, hasRoute ? route as string[] : [], limits.max_output_tokens); }
       catch { throw new ProtocolFault('UNSUPPORTED_CONFIGURATION', 'Profile, model, route, or limits are unsupported.', requestId, 'Review the profile and exact route before dispatch.'); }
-      return { protocol_version: '1.1', request_id: requestId, method: 'run_start', params: { run_id, provider: provider as ProfileId, model: model as string | null, ...(hasRoute ? { route_only: route as string[] } : {}), intent, prompt, context, limits, live_authorized: raw.params.live_authorized } };
+      return { protocol_version: '1.1', request_id: requestId, method: 'run_start', params: { run_id, provider: provider as ProfileId, model: model as string | null, ...(hasRoute ? { route_only: route as string[] } : {}), intent, prompt, context, limits, live_authorized: raw.params.live_authorized, ...(image_input ? { image_input } : {}), ...(hasThinking ? { deepseek_thinking: raw.params.deepseek_thinking as 'disabled' | 'low' } : {}) } };
     }
     if (raw.method === 'run_continue') {
       exactKeys(raw.params, ['run_id', 'call_id', 'tool_result'], requestId);

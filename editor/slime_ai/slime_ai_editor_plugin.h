@@ -64,12 +64,16 @@ class SlimeAIEditorPlugin : public EditorPlugin {
 	TextEdit *task_input = nullptr;
 	String selected_provider = "openai_responses";
 	String selected_intent = "discuss";
+	String selected_deepseek_thinking = "disabled";
+	int selected_output_tokens = 1024;
 	bool live_authorized_once = false;
 	String live_authorized_model;
 	String live_authorized_provider;
 	String live_authorized_scene_ref;
 	String live_authorized_revision;
 	String live_authorized_intent;
+	String live_authorized_thinking;
+	int live_authorized_output_tokens = 1024;
 	int live_authorized_mode = 0;
 	Array live_authorized_route;
 	Dictionary last_inspection;
@@ -82,6 +86,7 @@ class SlimeAIEditorPlugin : public EditorPlugin {
 	String reconcile_observed_effect;
 	uint64_t operation_sequence = 0;
 	uint64_t last_context_update = 0;
+	bool preflight_written = false;
 
 	void _show(const Dictionary &p_data);
 	void _update_context();
@@ -110,6 +115,11 @@ class SlimeAIEditorPlugin : public EditorPlugin {
 	void _intent_discuss();
 	void _intent_propose();
 	void _intent_execute();
+	void _thinking_disabled();
+	void _thinking_low();
+	void _output_256();
+	void _output_1024();
+	void _output_2048();
 	void _authorize_live_once();
 	void _start_run();
 	void _cancel_run();

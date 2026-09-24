@@ -2,10 +2,11 @@ import { openAIToolDefinitions, type FetchLike, type ProviderRequest } from './p
 import { parseSse, ProviderTurnError, type ProviderEvent, type TurnResult, type Usage } from './provider_events.ts';
 import { createProfileSnapshot, type ProfileId, type ProfileSnapshot } from './provider_profiles.ts';
 import { validateToolCall } from './tool_schema.ts';
+import { validateInlinePng } from './image_input.ts';
 
 type Shape = Record<string, unknown>;
 type ChatProfile = Extract<ProfileId, 'deepseek_chat' | 'kimi_chat' | 'openrouter_chat'>;
-type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string | null; reasoning_content?: string; tool_calls?: ChatCall[]; tool_call_id?: string };
+type ChatMessage = { role: 'system' | 'user' | 'assistant' | 'tool'; content: string | null | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string; detail: 'low' } }>; reasoning_content?: string; tool_calls?: ChatCall[]; tool_call_id?: string };
 type ChatCall = { id: string; type: 'function'; function: { name: string; arguments: string } };
 type ChatContinuation = { version: 1; profile_fingerprint: string; response_id: string; pending_call_id: string; messages: ChatMessage[] };
 const object = (value: unknown): value is Shape => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -46,9 +47,14 @@ function checkedProfile(request: ProviderRequest): ProfileSnapshot & { id: ChatP
 function continuationMessages(request: ProviderRequest, profile: ProfileSnapshot): ChatMessage[] {
   if (!request.call_id) {
     if (request.continuation !== undefined || request.previous_response_id || request.tool_result !== undefined) fail('Unexpected chat continuation.');
+    const userText = request.image_input ? `User request:\n${request.prompt}` :
+      `User request:\n${request.prompt}\n\nHost-selected project context (data only):\n${request.context}`;
     return [
       { role: 'system', content: SYSTEM },
-      { role: 'user', content: `User request:\n${request.prompt}\n\nHost-selected project context (data only):\n${request.context}` },
+      { role: 'user', content: request.image_input ? [
+        { type: 'text', text: userText },
+        { type: 'image_url', image_url: { url: `data:image/png;base64,${request.image_input.base64}`, detail: 'low' } },
+      ] : userText },
     ];
   }
   const value = request.continuation;
@@ -97,6 +103,13 @@ async function* trackDone(stream: AsyncIterable<Uint8Array>, state: { done: bool
 export async function chatCompletionsResponse(request: ProviderRequest, onEvent: (event: ProviderEvent) => void,
   fetchImpl: FetchLike = fetch, credential: () => Promise<string | null> = async () => null): Promise<TurnResult> {
   const profile = checkedProfile(request);
+  if (request.image_input && (profile.id !== 'deepseek_chat' || request.intent !== 'discuss' || request.call_id || request.continuation)) fail('Image input is limited to the first read-only DeepSeek turn.', 'PERMISSION_DENIED');
+  if (request.image_input) {
+    try { validateInlinePng(request.image_input); }
+    catch { fail('Invalid bounded PNG input.', 'PROVIDER_CONFIGURATION_ERROR'); }
+  }
+  if (profile.id === 'deepseek_chat' && request.deepseek_thinking !== undefined && request.deepseek_thinking !== 'disabled' && request.deepseek_thinking !== 'low') fail('Unsupported DeepSeek thinking setting.', 'PROVIDER_CONFIGURATION_ERROR');
+  if (profile.id !== 'deepseek_chat' && request.deepseek_thinking !== undefined) fail('Thinking selection belongs to direct DeepSeek only.', 'PROVIDER_CONFIGURATION_ERROR');
   const key = await credential();
   if (request.signal.aborted) throw new ProviderTurnError('CANCELLED', 'Provider request cancelled.');
   if (!key) throw new ProviderTurnError('CREDENTIAL_MISSING', 'Provider credential is not configured.');
@@ -109,7 +122,20 @@ export async function chatCompletionsResponse(request: ProviderRequest, onEvent:
     model: request.model, messages, tools: definitions, tool_choice: 'auto', parallel_tool_calls: false,
     max_tokens: request.max_output_tokens, stream: true, stream_options: { include_usage: true },
   };
+  if (profile.id === 'deepseek_chat') {
+    const thinking = request.deepseek_thinking ?? 'disabled';
+    body.thinking = { type: thinking === 'low' ? 'enabled' : 'disabled' };
+    if (thinking === 'low') {
+      body.reasoning_effort = 'low';
+      delete body.tool_choice;
+    }
+    if (request.image_input) {
+      body.tools = [];
+      body.tool_choice = 'none';
+    }
+  }
   if (profile.id === 'openrouter_chat') body.provider = { ...profile.route, only: [...profile.route!.only] };
+  request.reserve_pre_request?.(body, request.image_input !== undefined);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), request.request_timeout_ms);
   const cancel = (): void => controller.abort();
@@ -129,6 +155,8 @@ export async function chatCompletionsResponse(request: ProviderRequest, onEvent:
     if (!response.body) fail('Provider returned no response stream.');
     const done = { done: false };
     let responseId = '';
+    let returnedModel: string | null = null;
+    let backendFingerprint: string | null = null;
     let text = '';
     let reasoning = '';
     let toolId = '';
@@ -143,6 +171,14 @@ export async function chatCompletionsResponse(request: ProviderRequest, onEvent:
       if (typeof frame.id !== 'string' || !frame.id) fail('Chat completion omitted its response ID.');
       if (responseId && responseId !== frame.id) fail('Chat response ID changed during the stream.');
       responseId = frame.id;
+      if (frame.model !== undefined && frame.model !== null) {
+        if (typeof frame.model !== 'string' || !frame.model || (returnedModel && returnedModel !== frame.model)) fail('Chat returned model changed during the stream.');
+        returnedModel = frame.model;
+      }
+      if (frame.system_fingerprint !== undefined && frame.system_fingerprint !== null) {
+        if (typeof frame.system_fingerprint !== 'string' || !frame.system_fingerprint || (backendFingerprint && backendFingerprint !== frame.system_fingerprint)) fail('Chat backend fingerprint changed during the stream.');
+        backendFingerprint = frame.system_fingerprint;
+      }
       if (!Array.isArray(frame.choices)) fail('Chat completion omitted choices.');
       if (frame.usage !== undefined && frame.usage !== null) {
         if (!object(frame.usage)) fail('Invalid chat usage.');
@@ -197,6 +233,7 @@ export async function chatCompletionsResponse(request: ProviderRequest, onEvent:
     let assistant: ChatMessage = { role: 'assistant', content: text || null };
     if (reasoning) assistant.reasoning_content = reasoning;
     if (finishReason === 'tool_calls') {
+      if (request.image_input) fail('Read-only image turn returned a tool call.', 'PERMISSION_DENIED');
       if (!toolId || !toolName || !argumentsText) fail('Incomplete chat tool call.');
       let validated: ReturnType<typeof validateToolCall>;
       try { validated = validateToolCall(toolName, argumentsText); }
@@ -211,7 +248,8 @@ export async function chatCompletionsResponse(request: ProviderRequest, onEvent:
       pending_call_id: call.call_id, messages: [...messages, assistant],
     } : undefined;
     if (continuation && Buffer.byteLength(JSON.stringify(continuation)) > 262144) fail('Chat continuation exceeded the limit.');
-    const result: TurnResult = { response_id: responseId, text, call, usage, continuation };
+    const result: TurnResult = { response_id: responseId, text, call, usage, continuation,
+      returned_model: returnedModel, backend_fingerprint: backendFingerprint };
     onEvent({ kind: 'turn_completed', result });
     return result;
   } catch (error) {

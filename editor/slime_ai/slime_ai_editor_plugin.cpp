@@ -97,7 +97,7 @@ SlimeAIEditorPlugin::SlimeAIEditorPlugin() :
 	_button(column, "Recorded operation status", callable_mp(this, &SlimeAIEditorPlugin::_status));
 	_button(column, "Resolve reviewed uncertain operation (no replay)", callable_mp(this, &SlimeAIEditorPlugin::_resolve_reviewed_operation));
 	Label *run_label = memnew(Label);
-	run_label->set_text("Bounded provider task | 3 attempts / 4 tools / 1024 output tokens / 120 s");
+	run_label->set_text("Per run: 3 attempts / 4 tools / 120 s. DeepSeek pilot: 12 attempts / 24 tools / $2 reserved maximum per service session.");
 	run_label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
 	column->add_child(run_label);
 	_button(column, "Provider: OpenAI Responses", callable_mp(this, &SlimeAIEditorPlugin::_provider_openai));
@@ -113,6 +113,11 @@ SlimeAIEditorPlugin::SlimeAIEditorPlugin() :
 	route_input = memnew(LineEdit);
 	route_input->set_placeholder("OpenRouter exact upstream route (comma separated)");
 	column->add_child(route_input);
+	_button(column, "DeepSeek thinking: disabled", callable_mp(this, &SlimeAIEditorPlugin::_thinking_disabled));
+	_button(column, "DeepSeek thinking: low", callable_mp(this, &SlimeAIEditorPlugin::_thinking_low));
+	_button(column, "Output limit: 256", callable_mp(this, &SlimeAIEditorPlugin::_output_256));
+	_button(column, "Output limit: 1024", callable_mp(this, &SlimeAIEditorPlugin::_output_1024));
+	_button(column, "Output limit: 2048", callable_mp(this, &SlimeAIEditorPlugin::_output_2048));
 	_button(column, "Intent: Discuss", callable_mp(this, &SlimeAIEditorPlugin::_intent_discuss));
 	_button(column, "Intent: Propose", callable_mp(this, &SlimeAIEditorPlugin::_intent_propose));
 	_button(column, "Intent: Execute", callable_mp(this, &SlimeAIEditorPlugin::_intent_execute));
@@ -175,7 +180,7 @@ void SlimeAIEditorPlugin::_update_context() {
 	const Dictionary active_run = run_controller.status(root);
 	const String active_state = active_run.get("status", "idle");
 	const String active_label = active_state == "idle" ? String("none") : String(active_run.get("provider", "unknown")) + " (" + active_state + ")";
-	context->set_text(vformat("Service: %s | Next profile: %s | Next intent: %s\nActive run: %s | Project: %s\nScene: %s | Selection: %s", service.get_state(), selected_provider, selected_intent, active_label, ProjectSettings::get_singleton()->get_setting("application/config/name", "Unnamed Project"), root ? root->get_scene_file_path() : String("none"), selected));
+	context->set_text(vformat("Service: %s | Next profile: %s | Next intent: %s\nNext thinking: %s | Output tokens: %d\nActive run: %s | Project: %s\nScene: %s | Selection: %s", service.get_state(), selected_provider, selected_intent, selected_provider == "deepseek_chat" ? selected_deepseek_thinking : String("provider default"), selected_output_tokens, active_label, ProjectSettings::get_singleton()->get_setting("application/config/name", "Unnamed Project"), root ? root->get_scene_file_path() : String("none"), selected));
 	scene_context_button->set_text(vformat("Scene: %s (inspect)", root ? root->get_scene_file_path().get_file() : String("none")));
 	object_context_button->set_text(vformat("Node: %s (inspect)", selected));
 }
@@ -489,6 +494,36 @@ void SlimeAIEditorPlugin::_intent_execute() {
 	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
 }
 
+void SlimeAIEditorPlugin::_thinking_disabled() {
+	selected_deepseek_thinking = "disabled";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_thinking_low() {
+	selected_deepseek_thinking = "low";
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_output_256() {
+	selected_output_tokens = 256;
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_output_1024() {
+	selected_output_tokens = 1024;
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
+void SlimeAIEditorPlugin::_output_2048() {
+	selected_output_tokens = 2048;
+	live_authorized_once = false;
+	_show(run_controller.status(EditorNode::get_singleton()->get_edited_scene()));
+}
+
 void SlimeAIEditorPlugin::_authorize_live_once() {
 	Node *root = EditorNode::get_singleton()->get_edited_scene();
 	const Array route = _route_selection(route_input->get_text());
@@ -501,12 +536,19 @@ void SlimeAIEditorPlugin::_authorize_live_once() {
 		_show(inspection);
 		return;
 	}
+	const Dictionary preflight = run_controller.preflight_context(root, EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));
+	if (preflight.has("error")) {
+		_show(preflight);
+		return;
+	}
 	live_authorized_once = true;
 	live_authorized_model = model_input->get_text().strip_edges();
 	live_authorized_provider = selected_provider;
 	live_authorized_scene_ref = inspection["scene_ref"];
 	live_authorized_revision = inspection["revision"];
 	live_authorized_intent = selected_intent;
+	live_authorized_thinking = selected_deepseek_thinking;
+	live_authorized_output_tokens = selected_output_tokens;
 	live_authorized_mode = int(transaction.get_mode());
 	live_authorized_route = route.duplicate();
 	Dictionary result;
@@ -517,11 +559,28 @@ void SlimeAIEditorPlugin::_authorize_live_once() {
 	result["scene_ref"] = live_authorized_scene_ref;
 	result["revision"] = live_authorized_revision;
 	result["intent"] = live_authorized_intent;
+	result["deepseek_thinking"] = selected_provider == "deepseek_chat" ? Variant(live_authorized_thinking) : Variant();
 	result["permission_mode"] = live_authorized_mode == SlimeAI::SceneTransaction::MANUAL ? "Manual" : (live_authorized_mode == SlimeAI::SceneTransaction::PROTECTED ? "Protected" : "Freedom");
-	result["limits"] = "3 attempts, 4 tool calls, 1024 output tokens, 120-second deadline";
+	result["endpoint"] = selected_provider == "deepseek_chat" ? "https://api.deepseek.com/chat/completions" : "selected profile fixed endpoint";
+	result["protocol_family"] = selected_provider == "deepseek_chat" ? "Chat Completions" : "selected profile protocol";
+	result["task_prompt"] = task_input->get_text();
+	result["transmitted_context"] = preflight["transmitted_context"];
+	result["serialized_context_bytes"] = preflight["serialized_context_bytes"];
+	Array enabled_tools;
+	for (const String &name : { "project_inspect", "scene_inspect", "object_inspect", "api_describe", "project_search", "code_read", "scene_patch_preview", "changeset_status" }) {
+		if (selected_intent != "discuss" || name != "scene_patch_preview") {
+			enabled_tools.push_back(name);
+		}
+	}
+	result["enabled_tools"] = enabled_tools;
+	result["stream"] = true;
+	result["parallel_tool_calls"] = false;
+	result["tool_choice"] = selected_provider == "deepseek_chat" && selected_deepseek_thinking == "low" ? "omitted" : "auto";
+	result["automatic_fallback"] = false;
+	result["limits"] = vformat("3 attempts, 4 tool calls, %d output tokens, 120-second deadline", selected_output_tokens);
 	result["context_limit_bytes"] = 32768;
 	result["request_timeout_ms"] = 30000;
-	result["limit_mode"] = "finite_requests_and_tokens_no_monetary_cap";
+	result["limit_mode"] = selected_provider == "deepseek_chat" ? "peak_rate_$2_pre_request_reservation_per_service_session" : "finite_requests_and_tokens_no_monetary_cap";
 	result["network_request"] = "not_run";
 	_show(result);
 }
@@ -531,9 +590,9 @@ void SlimeAIEditorPlugin::_start_run() {
 	const String model = selected_provider == "fake" ? String() : model_input->get_text().strip_edges();
 	const Array route = _route_selection(route_input->get_text());
 	const Dictionary inspection = root ? SlimeAI::SceneInspector::inspect(root, EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene())) : Dictionary();
-	const bool authorized = selected_provider != "fake" && live_authorized_once && live_authorized_provider == selected_provider && live_authorized_model == model && live_authorized_intent == selected_intent && live_authorized_mode == int(transaction.get_mode()) && live_authorized_route == route && !inspection.has("error") && String(inspection.get("scene_ref", "")) == live_authorized_scene_ref && String(inspection.get("revision", "")) == live_authorized_revision;
+	const bool authorized = selected_provider != "fake" && live_authorized_once && live_authorized_provider == selected_provider && live_authorized_model == model && live_authorized_intent == selected_intent && live_authorized_mode == int(transaction.get_mode()) && live_authorized_route == route && live_authorized_thinking == selected_deepseek_thinking && live_authorized_output_tokens == selected_output_tokens && !inspection.has("error") && String(inspection.get("scene_ref", "")) == live_authorized_scene_ref && String(inspection.get("revision", "")) == live_authorized_revision;
 	live_authorized_once = false;
-	_show(run_controller.start(root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()), selected_provider, model, selected_intent, task_input->get_text(), authorized, route));
+	_show(run_controller.start(root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()), selected_provider, model, selected_intent, task_input->get_text(), authorized, route, selected_provider == "deepseek_chat" ? selected_deepseek_thinking : String("disabled"), selected_output_tokens));
 }
 
 void SlimeAIEditorPlugin::_cancel_run() {
@@ -575,6 +634,23 @@ void SlimeAIEditorPlugin::_mode_freedom() {
 
 void SlimeAIEditorPlugin::_notification(int p_what) {
 	if (p_what == NOTIFICATION_PROCESS) {
+		if (!preflight_written && OS::get_singleton()->get_environment("SLIME_AI_TEST_NO_NETWORK_PREFLIGHT") == "1") {
+			Node *root = EditorNode::get_singleton()->get_edited_scene();
+			const String output = OS::get_singleton()->get_environment("SLIME_AI_PREFLIGHT_OUTPUT");
+			if (root && root->get_scene_file_path() == "res://main.tscn" && !output.is_empty()) {
+				preflight_written = true;
+				Dictionary result = run_controller.preflight_context(root, EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));
+				result["provider"] = "deepseek_chat";
+				result["model"] = "deepseek-flash";
+				result["permission_mode"] = transaction.get_mode() == SlimeAI::SceneTransaction::MANUAL ? "Manual" : "other";
+				result["network_request"] = "not_run";
+				Ref<FileAccess> file = FileAccess::open(output, FileAccess::WRITE);
+				if (file.is_valid()) {
+					file->store_string(JSON::stringify(result, "  "));
+					file->flush();
+				}
+			}
+		}
 		if (p04_editor_probe.enabled()) {
 			Node *root = EditorNode::get_singleton()->get_edited_scene();
 			p04_editor_probe.tick(service, run_controller, transaction, root, root && EditorNode::get_singleton()->is_scene_unsaved(EditorNode::get_editor_data().get_edited_scene()));

@@ -6,7 +6,8 @@ const object = (value: unknown): value is Shape => value !== null && typeof valu
 
 export type Usage = { input_tokens: number | null; output_tokens: number | null };
 export type ReadyCall = { call_id: string; tool_name: ToolName; arguments: Shape; provider_response_id: string };
-export type TurnResult = { response_id: string; text: string; call: ReadyCall | null; usage: Usage; continuation?: unknown };
+export type TurnResult = { response_id: string; text: string; call: ReadyCall | null; usage: Usage; continuation?: unknown;
+  returned_model?: string | null; backend_fingerprint?: string | null };
 export type ProviderEvent =
   | { kind: 'text_delta'; text: string }
   | { kind: 'usage_update'; usage: Usage }

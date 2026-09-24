@@ -2,6 +2,7 @@ import { readOpenAIKey } from './credentials.ts';
 import { parseSse, ProviderTurnError, TurnAccumulator, type ProviderEvent, type TurnResult } from './provider_events.ts';
 import { OPENAI_TOOLS } from './tool_schema.ts';
 import type { ProfileId, ProfileSnapshot } from './provider_profiles.ts';
+import type { InlinePng } from './image_input.ts';
 
 export type Intent = 'discuss' | 'propose' | 'execute';
 export type Provider = ProfileId;
@@ -10,6 +11,8 @@ export type ProviderRequest = {
   max_output_tokens: number; request_timeout_ms: number;
   previous_response_id?: string; call_id?: string; tool_result?: string;
   profile?: ProfileSnapshot; continuation?: unknown;
+  image_input?: InlinePng; deepseek_thinking?: 'disabled' | 'low';
+  reserve_pre_request?: (body: Record<string, unknown>, hasImage: boolean) => void;
   signal: AbortSignal;
 };
 
