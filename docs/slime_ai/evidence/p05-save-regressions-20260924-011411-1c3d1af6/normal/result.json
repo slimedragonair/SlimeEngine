@@ -1,0 +1,10 @@
+{
+  "dirty_after": false,
+  "dirty_before": true,
+  "marker_present": true,
+  "save_error": 0,
+  "scenario": "normal",
+  "scene_after_sha256": "ec25e2de6e64516334dce88c5a5d4e0fc83d4f29755cf0ae13c709e203aae064",
+  "scene_before_sha256": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+  "service_required": false
+}

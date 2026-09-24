@@ -1,5 +1,27 @@
 # P00–P03 test matrix
 
+## P05 final verification (2026-09-24)
+
+Source commit `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd`; binary SHA-256 `1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855`. The historical P00–P04 matrix follows this section. Commands were run in `E:\SlimeEngine` except npm commands, which used `tools/slime_ai/agent_service`.
+
+| Gate | Exact command | Result / evidence |
+|---|---|---|
+| Build | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/slime_ai/harness/build_editor.ps1 -Jobs 8` | exit 0; `evidence/editor-build-20260924-032939-741-manifest.txt` |
+| Native | `$env:SLIME_AI_TEST_WIRE_LOG='E:\SlimeEngine\docs\slime_ai\evidence\p05-native-wire-events.jsonl'; powershell -NoProfile -ExecutionPolicy Bypass -File tools/slime_ai/harness/run_native_tests.ps1` | exit 0; 40/40 cases, 507/507 assertions, 1429 skipped by the focused filter; `evidence/native-tests.log`, `native-tests-manifest.txt` |
+| Service | `npm test` | exit 0; 63/63, 0 skipped, 0 failed |
+| Types | `npm run typecheck` | exit 0 |
+| Save | `powershell -NoProfile -ExecutionPolicy Bypass -File tools/slime_ai/harness/run_save_regressions.ps1` | exit 0; 5 executed scenarios passed; `evidence/p05-save-regressions-20260924-033050-d6249261/manifest.txt` |
+| 2D/3D smoke | `godot.windows.editor.dev.x86_64.console.exe --headless --editor --path <fresh fixture copy> --quit-after 60` | both exit 0; `evidence/p05-final-smoke-2d.log`, `p05-final-smoke-3d.log` |
+| Diff | `git diff --cached --check` before source commit | exit 0 |
+| Full upstream Godot suite | not_run | 1429 skipped by focused native filter; no broader claim |
+| Live providers | not_run | no authorized finite run and no external request |
+
+The native wire test invokes `tests/native_wire_fixture_service.ts` in the built editor, where all five production adapters receive provider-format HTTP/SSE bytes. Its 20 JSONL rows represent two complete native suite runs (10 initial/continuation rows each); every row asserts endpoint/model/schema/profile and linked result; OpenRouter additionally asserts exact `only`, `allow_fallbacks:false`, and `require_parameters:true`. `evidence/P05_WIRE_CONFORMANCE.md` maps unit cases and negative paths. The first wire run failed four profiles on a missing redirect guard; `evidence/p05-native-wire-first-failed-manifest.txt` and `p05-native-wire-first-events.jsonl` are retained, then the guard was fixed and rerun.
+
+Save case IDs: SV01 normal save, SV02 Save As success, SV03 Save All, SV07 resource save/reload, SV08 undo/redo/save passed. SV02 Save As dialog cancellation is `not_run`; SV04/SV05 refer to the earlier real locked-save and denied-retry evidence in `evidence/P03_SAVE_FAILURE.md`; SV06 AI-disabled ordinary save is represented by the no-service save probe. These are targeted regressions, not a full upstream suite.
+
+---
+
 `not_run` means no test execution has been observed. A compile or code review never changes this state to passed.
 
 | ID | Scenario | State | Evidence |

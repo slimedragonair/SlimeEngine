@@ -1,0 +1,183 @@
+[doctest] doctest version is "2.4.12"
+[doctest] run with "--help" for options
+===============================================================================
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(77):
+TEST CASE:  [SlimeAI][P05Wire] Anthropic Messages reaches native authority
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(48): FATAL ERROR: REQUIRE_FALSE( run.get_preview_id().is_empty() ) is NOT correct!
+  values: REQUIRE_FALSE( true )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(50): ERROR: CHECK( String(Dictionary(run.apply(root, true)["error"])["code"]) == "PERMISSION_REQUIRED" ) is NOT correct!
+  values: CHECK( PERMISSION_DENIED == PERMISSION_REQUIRED )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(51): ERROR: CHECK( String(run.grant()["status"]) == "granted" ) is NOT correct!
+  values: CHECK( error == granted )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(52): ERROR: CHECK( String(run.apply(root, true)["status"]) == "applied" ) is NOT correct!
+  values: CHECK( error == applied )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(53): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(55): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(56): ERROR: CHECK( String(transaction.undo(root)["status"]) == "undone" ) is NOT correct!
+  values: CHECK( error == undone )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(58): ERROR: CHECK( String(transaction.redo(root)["status"]) == "redone" ) is NOT correct!
+  values: CHECK( error == redone )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(59): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: anthropic_messages
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(68): ERROR: CHECK( String(run.status(root)["status"]) == "completed" ) is NOT correct!
+  values: CHECK( failed == completed )
+  logged: anthropic_messages
+
+===============================================================================
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(78):
+TEST CASE:  [SlimeAI][P05Wire] DeepSeek Chat reaches native authority
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(48): FATAL ERROR: REQUIRE_FALSE( run.get_preview_id().is_empty() ) is NOT correct!
+  values: REQUIRE_FALSE( true )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(50): ERROR: CHECK( String(Dictionary(run.apply(root, true)["error"])["code"]) == "PERMISSION_REQUIRED" ) is NOT correct!
+  values: CHECK( PERMISSION_DENIED == PERMISSION_REQUIRED )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(51): ERROR: CHECK( String(run.grant()["status"]) == "granted" ) is NOT correct!
+  values: CHECK( error == granted )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(52): ERROR: CHECK( String(run.apply(root, true)["status"]) == "applied" ) is NOT correct!
+  values: CHECK( error == applied )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(53): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(55): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(56): ERROR: CHECK( String(transaction.undo(root)["status"]) == "undone" ) is NOT correct!
+  values: CHECK( error == undone )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(58): ERROR: CHECK( String(transaction.redo(root)["status"]) == "redone" ) is NOT correct!
+  values: CHECK( error == redone )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(59): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: deepseek_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(68): ERROR: CHECK( String(run.status(root)["status"]) == "completed" ) is NOT correct!
+  values: CHECK( failed == completed )
+  logged: deepseek_chat
+
+===============================================================================
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(79):
+TEST CASE:  [SlimeAI][P05Wire] Kimi Chat reaches native authority
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(48): FATAL ERROR: REQUIRE_FALSE( run.get_preview_id().is_empty() ) is NOT correct!
+  values: REQUIRE_FALSE( true )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(50): ERROR: CHECK( String(Dictionary(run.apply(root, true)["error"])["code"]) == "PERMISSION_REQUIRED" ) is NOT correct!
+  values: CHECK( PERMISSION_DENIED == PERMISSION_REQUIRED )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(51): ERROR: CHECK( String(run.grant()["status"]) == "granted" ) is NOT correct!
+  values: CHECK( error == granted )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(52): ERROR: CHECK( String(run.apply(root, true)["status"]) == "applied" ) is NOT correct!
+  values: CHECK( error == applied )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(53): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(55): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(56): ERROR: CHECK( String(transaction.undo(root)["status"]) == "undone" ) is NOT correct!
+  values: CHECK( error == undone )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(58): ERROR: CHECK( String(transaction.redo(root)["status"]) == "redone" ) is NOT correct!
+  values: CHECK( error == redone )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(59): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: kimi_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(68): ERROR: CHECK( String(run.status(root)["status"]) == "completed" ) is NOT correct!
+  values: CHECK( failed == completed )
+  logged: kimi_chat
+
+===============================================================================
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(80):
+TEST CASE:  [SlimeAI][P05Wire] OpenRouter Chat reaches native authority
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(48): FATAL ERROR: REQUIRE_FALSE( run.get_preview_id().is_empty() ) is NOT correct!
+  values: REQUIRE_FALSE( true )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(50): ERROR: CHECK( String(Dictionary(run.apply(root, true)["error"])["code"]) == "PERMISSION_REQUIRED" ) is NOT correct!
+  values: CHECK( PERMISSION_DENIED == PERMISSION_REQUIRED )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(51): ERROR: CHECK( String(run.grant()["status"]) == "granted" ) is NOT correct!
+  values: CHECK( error == granted )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(52): ERROR: CHECK( String(run.apply(root, true)["status"]) == "applied" ) is NOT correct!
+  values: CHECK( error == applied )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(53): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(55): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(56): ERROR: CHECK( String(transaction.undo(root)["status"]) == "undone" ) is NOT correct!
+  values: CHECK( error == undone )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(58): ERROR: CHECK( String(transaction.redo(root)["status"]) == "redone" ) is NOT correct!
+  values: CHECK( error == redone )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(59): ERROR: CHECK( root->get_child_count() == 1 ) is NOT correct!
+  values: CHECK( 0 == 1 )
+  logged: openrouter_chat
+
+tests\editor\slime_ai\test_slime_ai_p05_provider_wire.cpp(68): ERROR: CHECK( String(run.status(root)["status"]) == "completed" ) is NOT correct!
+  values: CHECK( failed == completed )
+  logged: openrouter_chat
+
+===============================================================================
+[doctest] test cases:  38 |  34 passed |  4 failed | 1429 skipped
+[doctest] assertions: 478 | 438 passed | 40 failed |
+[doctest] Status: FAILURE!
+Unicode parsing error: Byte 28 is not a correct continuation byte after c3

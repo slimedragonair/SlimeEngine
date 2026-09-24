@@ -1,0 +1,61 @@
+{
+  "absent_after_undo": true,
+  "apply": {
+    "node_ref": "scene:1437975254593:1438965110346:UndoSaveMarker",
+    "operation_id": "ordinary-undo-save-probe",
+    "status": "applied"
+  },
+  "dirty_after_redo_save": false,
+  "dirty_after_undo_save": false,
+  "grant": {
+    "status": "granted"
+  },
+  "operation_status": {
+    "execution": "applied",
+    "operation_id": "ordinary-undo-save-probe",
+    "persistence": "unverified",
+    "status": "applied",
+    "verification": "native_transaction_confirmed"
+  },
+  "present_after_redo": true,
+  "preview": {
+    "after": {
+      "class_name": "Node2D",
+      "name": "UndoSaveMarker",
+      "op": "create_child",
+      "parent_ref": "scene:1437975254593:1437975254593:.",
+      "properties": {
+        "position": {
+          "type": "Vector2",
+          "value": [
+            48,
+            24
+          ]
+        }
+      }
+    },
+    "base_revision": "5ada7efb1170c2b09285000990fd4fa0f8c45979e11a2e44f79a922cc750fc1e",
+    "before": null,
+    "disk_revision": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+    "mode": "Manual",
+    "operation_id": "ordinary-undo-save-probe",
+    "preview_hash": "f612f50ce428706997b5988e8f4720aa943e1952697771d54c5571304cf66c53",
+    "preview_id": "6f9b314c2e742245861f97941d8aa295363992fd2127045b1520f803fceced68",
+    "requires_native_grant": true,
+    "risk": "Adds one scene-owned node.",
+    "scene_scope": "res://main.tscn",
+    "status": "preview"
+  },
+  "redo": {
+    "status": "redone"
+  },
+  "save_after_redo_error": 0,
+  "save_after_undo_error": 0,
+  "scenario": "undo_save",
+  "scene_after_sha256": "2de9dca69a728d662f708531a9eda74dbfb2af4c823487cceb6cfff8245f3943",
+  "scene_before_sha256": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+  "service_required": false,
+  "undo": {
+    "status": "undone"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "dialog_cancel": "not_run_no_test_owned_dialog_cancel_callback",
+  "dirty_after": false,
+  "dirty_before": true,
+  "save_error": 0,
+  "saved_as_exists": true,
+  "saved_as_sha256": "5e496d91b6c3d0a2a79ac3341a479895a20b88f3cd69cab395de0072eaa2a208",
+  "scenario": "save_as",
+  "scene_after_sha256": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+  "scene_before_sha256": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+  "scene_path_after": "res://saved_as.tscn",
+  "service_required": false
+}

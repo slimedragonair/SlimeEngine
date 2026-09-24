@@ -1,4 +1,18 @@
-# Slime AI status — P04 handoff
+# Slime AI status — P05 handoff
+
+P05 implementation source is commit `2fced2f7c06e6e8de29c88212cfcefc7cdec17cd` on `codex/slime-ai-p00-p03`. The editor built from it is `bin/godot.windows.editor.dev.x86_64.console.exe`, SHA-256 `1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855` (`evidence/editor-build-20260924-032939-741-manifest.txt`). The service package lock SHA-256 is `B4B9EAF42178EC6F360C4FFD5230012658B7A9C43BAC8EB317FE85E32E01284A`. Documentation is committed separately after verification; that later HEAD changes no P05 source or binary identity.
+
+| Dimension | P05 state | Evidence |
+|---|---|---|
+| Implementation | complete within one operation/one loaded scene | Five explicit profiles, three protocol families, one bounded run manager and native run controller. `PROVIDER_MATRIX.md`; `SOURCE_MAP.md`. |
+| Offline wire conformance | passed for five profiles | Production adapters consumed provider-format HTTP/SSE fixtures; initial and linked continuation outbound requests were asserted in the built editor. Native 40/40 cases, 507/507 assertions; service 63/63; typecheck exit 0. `evidence/P05_WIRE_CONFORMANCE.md`. |
+| Built-editor integration | passed for scoped offline fixtures | Five profile wire loops traversed native preview/grant/apply/undo/redo/dedup/status. Real-input dock review exercised scene inspection, profile selection, blocked live Start, offline task/status and prior P04 fake Execute/save/reopen. Input coverage and probe coverage are separate in `evidence/P05_OFFLINE_EDITOR_DEMO.md` and `evidence/P04_CONTROL_REVIEW.md`. |
+| Ordinary save regression | passed for executed cases | Normal save, Save As success, Save All with two dirty tabs, resource save/reload, undo/redo/save; copied fixtures and binary identity in `evidence/p05-save-regressions-20260924-033050-d6249261/manifest.txt`. Save As cancellation and full upstream suite are `not_run`. |
+| Live provider | not_run | No external API request, credential use, or billable action. DeepSeek `deepseek-flash` was entered only into the dry dock; unapproved Start returned `LIVE_AUTHORIZATION_REQUIRED`. `evidence/P05_LIVE_STATUS.md`. |
+
+The P03 locked-save/recovery evidence remains valid. Earlier failed P05 wire and baseline smoke checkpoints remain in `evidence/`; later passes do not erase them. The four untracked user-supplied work-order/planning files were preserved, and nothing was pushed.
+
+## Historical P04 handoff
 
 As of 2026-09-23/24, the P03 denied-save closeout and bounded P04 implementation are built in the existing checkout. Source identity is local HEAD `b6112992a830487ba3a1f81c4cd125455eb8ff82` **plus the working-tree changes** listed by `git status --short`; the checkout was not reset or pushed. Final editor binary `bin/godot.windows.editor.dev.x86_64.console.exe` has SHA-256 `DD074DB9A8F501432CE8C2BC66B33E5091C072C24A01F122A534CBEF7BEBC6A5`. Final build evidence: `evidence/editor-build-20260924-002902-739-manifest.txt`. Exact commands and counts are in `TEST_MATRIX.md`.
 

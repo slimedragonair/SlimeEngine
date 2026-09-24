@@ -1,0 +1,7 @@
+# P05 live verification status
+
+All five provider profiles: `live_observation=not_run` as of the P05 handoff. No external provider request, credential lookup using a real key, or billable action occurred. Offline tests used dummy credentials and injected HTTP/SSE responses in process. Credential presence and model selection are not consent.
+
+The user proposed DeepSeek `deepseek-flash` and supplied a key in chat for future testing. The key was not written into source, project files, fixtures, documentation, logs, screenshots, or environment variables by this task. Since it appeared in chat, rotation is recommended before any live use. The live dry dock was exercised with DeepSeek/model/task but without authorization; Start returned `LIVE_AUTHORIZATION_REQUIRED`.
+
+To make a later run reviewable, capture the exact profile and endpoint, allowed route (if OpenRouter), selected disposable scene and context attachment scope, intent/mode, finite attempt/tool/mutation/output/input/time limits, expiry, and a monetary cap with a verified rate source or explicitly chosen alternative request/token limit mode. Configure the user-scoped credential privately, inspect dry-run status, and authorize one run. Start read-only, then preview, then independently grant one native edit. Record actual vendor/model/served-route metadata if present, usage or unknown accounting, native operation status, save/reopen result, and any failures without treating a retry as a new operation.

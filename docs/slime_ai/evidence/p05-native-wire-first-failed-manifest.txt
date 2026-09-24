@@ -1,0 +1,8 @@
+revision=579a1128e78f8b3210144630060e71c9fb3f9faf
+binary=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe
+binary_sha256=5C00D3C5A6CD3F6E724174C0EC1F29FC6BC41ED41895127D027A7B1CF4334791
+filter=*[SlimeAI]*
+command=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe --test --test-case=*[SlimeAI]* --no-colors
+exit_code=1
+executed_cases=38
+summary=[doctest] test cases:  38 |  34 passed |  4 failed | 1429 skipped

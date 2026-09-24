@@ -1,0 +1,9 @@
+{
+  "reload_matches": true,
+  "resource_after_sha256": "ae563b29127df1f55d80a500ef2e9ca5b9f18dd2b4bf6a07e1778309e2259c56",
+  "resource_before_sha256": "aa914e6f428ad5996ba1705ccd4a88d657d0943bd9dc5d2e0e4be37042924632",
+  "save_error": 0,
+  "scenario": "resource",
+  "scene_before_sha256": "fe8557743069a5084b2a19c9dcbb9fbc2964d9ba729c1fa6dedc15ce1674a88f",
+  "service_required": false
+}

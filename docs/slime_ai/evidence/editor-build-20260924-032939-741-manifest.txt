@@ -1,0 +1,32 @@
+revision=2fced2f7c06e6e8de29c88212cfcefc7cdec17cd
+command=python -c <process-local misc import correction> platform=windows target=editor arch=x86_64 tests=yes dev_build=yes -j8
+started_utc=2026-09-24T03:29:39.8535076Z
+dirty_paths:
+ M docs/slime_ai/evidence/native-tests-manifest.txt
+ M docs/slime_ai/evidence/native-tests.log
+?? docs/slime_ai/SlimeEngine_AI_Implementation_Plan.md
+?? docs/slime_ai/SlimeEngine_Agent_Kickoff.md
+?? docs/slime_ai/SlimeEngine_P03_Closeout_P04_Work_Order.md
+?? docs/slime_ai/SlimeEngine_P04_Verification_P05_Work_Order.md
+?? docs/slime_ai/evidence/editor-build-20260924-005713-114-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011247-560-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011319-498-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011540-504-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011708-204-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-012557-163-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-030547-533-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-031253-134-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-031921-928-manifest.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-2d-first.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-2d.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-3d.txt
+?? docs/slime_ai/evidence/p05-native-wire-events.jsonl
+?? docs/slime_ai/evidence/p05-native-wire-first-events.jsonl
+?? docs/slime_ai/evidence/p05-native-wire-first-failed-manifest.txt
+?? docs/slime_ai/evidence/p05-native-wire-intermediate-events.jsonl
+?? docs/slime_ai/evidence/p05-save-regressions-20260924-011411-1c3d1af6/
+?? docs/slime_ai/evidence/p05-save-regressions-20260924-032137-849cff63/
+exit_code=0
+binary=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe
+binary_sha256=1E16C51ACB85D91DBB4EA4E71A098C9916EA4ACAA651ED291E79AD01A0B52855
+finished_utc=2026-09-24T03:30:27.7262992Z

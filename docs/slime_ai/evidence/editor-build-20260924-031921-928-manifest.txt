@@ -1,0 +1,53 @@
+revision=579a1128e78f8b3210144630060e71c9fb3f9faf
+command=python -c <process-local misc import correction> platform=windows target=editor arch=x86_64 tests=yes dev_build=yes -j8
+started_utc=2026-09-24T03:19:22.0376630Z
+dirty_paths:
+ M docs/slime_ai/evidence/native-tests-manifest.txt
+ M docs/slime_ai/evidence/native-tests.log
+ M editor/slime_ai/slime_ai_editor_plugin.cpp
+ M editor/slime_ai/slime_ai_editor_plugin.h
+ M editor/slime_ai/slime_ai_run_controller.cpp
+ M editor/slime_ai/slime_ai_run_controller.h
+ M editor/slime_ai/slime_ai_scene_transaction.h
+ M editor/slime_ai/slime_ai_service_client.cpp
+ M tests/editor/slime_ai/test_slime_ai_p04_run.cpp
+ M tools/slime_ai/agent_service/src/credentials.ts
+ M tools/slime_ai/agent_service/src/main.ts
+ M tools/slime_ai/agent_service/src/protocol.ts
+ M tools/slime_ai/agent_service/src/provider_events.ts
+ M tools/slime_ai/agent_service/src/providers.ts
+ M tools/slime_ai/agent_service/src/run_manager.ts
+ M tools/slime_ai/agent_service/tests/provider.test.ts
+?? docs/slime_ai/SlimeEngine_AI_Implementation_Plan.md
+?? docs/slime_ai/SlimeEngine_Agent_Kickoff.md
+?? docs/slime_ai/SlimeEngine_P03_Closeout_P04_Work_Order.md
+?? docs/slime_ai/SlimeEngine_P04_Verification_P05_Work_Order.md
+?? docs/slime_ai/evidence/editor-build-20260924-005713-114-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011247-560-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011319-498-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011540-504-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-011708-204-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-012557-163-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-030547-533-manifest.txt
+?? docs/slime_ai/evidence/editor-build-20260924-031253-134-manifest.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-2d-first.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-2d.txt
+?? docs/slime_ai/evidence/p05-baseline-smoke-3d.txt
+?? docs/slime_ai/evidence/p05-native-wire-events.jsonl
+?? docs/slime_ai/evidence/p05-native-wire-first-events.jsonl
+?? docs/slime_ai/evidence/p05-native-wire-first-failed-manifest.txt
+?? docs/slime_ai/evidence/p05-save-regressions-20260924-011411-1c3d1af6/
+?? editor/slime_ai/slime_ai_save_regression_probe.cpp
+?? editor/slime_ai/slime_ai_save_regression_probe.h
+?? tests/editor/slime_ai/test_slime_ai_p05_provider_wire.cpp
+?? tools/slime_ai/agent_service/src/anthropic_messages.ts
+?? tools/slime_ai/agent_service/src/chat_completions.ts
+?? tools/slime_ai/agent_service/src/provider_profiles.ts
+?? tools/slime_ai/agent_service/tests/anthropic_messages.test.ts
+?? tools/slime_ai/agent_service/tests/chat_completions.test.ts
+?? tools/slime_ai/agent_service/tests/native_wire_fixture_service.ts
+?? tools/slime_ai/harness/run_save_regressions.ps1
+exit_code=0
+binary=E:\SlimeEngine\bin\godot.windows.editor.dev.x86_64.console.exe
+binary_sha256=566F096B0031EDEB2A299FB361BBF917B665F6EE7AF969BEA321ED56A2A7BFDD
+finished_utc=2026-09-24T03:20:07.4537170Z

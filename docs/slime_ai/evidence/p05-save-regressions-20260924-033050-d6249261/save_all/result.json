@@ -1,0 +1,10 @@
+{
+  "main_after_sha256": "parent_checks_after_unlock",
+  "main_dirty_after": true,
+  "main_marker_present": true,
+  "save_all_return": "void_check_per_tab_and_disk",
+  "scenario": "save_all",
+  "second_after_sha256": "d0756ef533e8ff57482e93032494b32811564c2ff6ca86a3c1830e080b29e178",
+  "second_dirty_after": false,
+  "second_marker_present": true
+}

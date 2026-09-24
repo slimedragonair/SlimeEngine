@@ -1,5 +1,15 @@
 # Known issues and limitations
 
+## P05 additions
+
+- The five profiles are implemented and passed offline production-adapter wire fixtures, but none has been observed against a live provider. Provider acceptance, actual served OpenRouter route, real usage, billing, model-specific capabilities, and production network behavior remain `not_run`.
+- DeepSeek `deepseek-flash` is the user's selected future model. The supplied key was not copied to a file, command, test, log, project, or editor child. Credential presence is not authorization; a finite model/route/context authorization remains necessary before any request. Rotation is advisable because a key was pasted into chat.
+- The editor uses finite 3-attempt, 4-tool, 1024-output-token-per-request, 120-second task bounds. Those are local bounds, not a guaranteed monetary cap. Unknown provider usage reserves allowance and stays unknown rather than becoming zero.
+- OpenRouter sends an exact requested upstream route with fallbacks disabled; offline fixtures verify serialization. A real provider's observed route and retention behavior cannot be certified by those fixtures.
+- Actual dock input covered selected-scene inspection, service connection, mode/profile/model controls, blocked live Start, offline fake Discuss/status, and the earlier native Execute/save/reopen walkthrough. Pending-profile switch and cancellation timing are covered by native/service method-level probes, not by a visible pending-network walkthrough. `evidence/P04_CONTROL_REVIEW.md` records this distinction.
+- Save As success was tested; dialog cancellation was not. The targeted ordinary save regressions do not represent the 1429 native tests excluded by the focused filter or the full Godot upstream suite. The first 2D baseline smoke and first P05 wire run failed; their evidence is retained.
+- The prior P04 `LIVE-01` entry described the then-only OpenAI profile. It is historical. P05 has five independent live `not_run` states in `PROVIDER_MATRIX.md`.
+
 - The host Python environment has a `site-packages/misc` package that shadows Godot's `misc/utility` when SCons is launched normally. Use the exact process-local import correction in `BASELINE.md` or remove the collision outside this task. The engine source itself compiled successfully with the correction.
 - The editor demonstration is visual and interactive on trusted copied fixtures, while the native suite checks deterministic command behavior. Neither is a long-running soak or general game acceptance test.
 - The successful baseline native check covered 2 Node2D cases; full upstream test coverage has not been run.
