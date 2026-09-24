@@ -206,6 +206,7 @@ TEST_CASE("[SlimeAI][P04Run] pause defers tool dispatch and cancel preserves sce
 		CHECK(root->get_child_count() == 0);
 		const Dictionary resumed = run.resume(root, true);
 		CHECK_FALSE(resumed.has("error"));
+		_wait_for_preview(service, run, root);
 		REQUIRE_FALSE(run.get_preview_id().is_empty());
 		CHECK(String(run.cancel()["status"]) == "cancelled");
 		CHECK(root->get_child_count() == 0);
